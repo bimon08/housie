@@ -254,9 +254,10 @@
           <button class="btn-icon" id="btn-leave-game" aria-label="Leave game">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
+          <span class="room-badge room-badge-header" id="game-room-badge">🎯 Room</span>
         </div>
         <div class="game-header-center">
-          <span class="room-badge" id="game-room-badge">🎯 Room</span>
+          <div class="recent-balls" id="recent-balls"></div>
         </div>
         <div class="game-header-right">
           <span id="numbers-called-count" class="called-count-badge">0/90</span>
@@ -280,7 +281,7 @@
       <!-- Game Body: 3-column layout -->
       <div class="game-body">
 
-        <!-- LEFT: Number Ball + Draw + Claim -->
+        <!-- LEFT: Room + Number Ball + Draw + Claim -->
         <div class="game-panel-left">
           <div class="number-ball" id="number-ball">
             <span class="number-ball-value" id="current-number-text">?</span>
@@ -288,7 +289,7 @@
           <!-- host draw button injected by JS -->
           <div class="claim-buttons" id="claim-buttons">
             <button class="claim-btn claim-full-house" data-prize="fullHouse" id="claim-fullHouse">
-              <span class="claim-label">✋<br>Full<br>House!</span>
+              <span class="claim-label">✋<br>Yesss!</span>
             </button>
           </div>
         </div>
@@ -303,13 +304,13 @@
           </div>
         </div>
 
-        <!-- RIGHT: Players -->
-        <div class="game-panel-right">
-          <div class="players-sidebar-collapsed">
+        <!-- RIGHT: Players (collapsible) -->
+        <div class="game-panel-right" id="game-panel-right">
+          <div class="players-header" id="players-header">
             <span class="players-count-icon">👥</span>
             <span class="players-count-num" id="players-count-num">0</span>
+            <span class="players-label-text">Players</span>
           </div>
-          <div class="players-sidebar-label">Players</div>
           <div class="players-ribbon" id="players-ribbon"></div>
         </div>
 
@@ -367,7 +368,9 @@
   </div> <!-- /app -->
 
   <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/motion.js"></script>
   <script src="/js/ui.js"></script>
   <script src="/js/tts.js"></script>
   <script src="/js/game.js"></script>

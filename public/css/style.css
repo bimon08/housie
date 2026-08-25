@@ -1167,6 +1167,12 @@ body {
   padding-right: max(12px, env(safe-area-inset-right, 12px));
 }
 
+.game-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .game-header-right {
   display: flex;
   align-items: center;
@@ -1214,6 +1220,45 @@ body {
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+/* Recent Balls Strip — in header */
+.recent-balls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+}
+
+.recent-ball {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: #333;
+  background: radial-gradient(circle at 35% 35%, #ffe066, #ffb300);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.4);
+  animation: ballPop 0.3s ease-out;
+}
+
+@keyframes ballPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Room badge in header beside back arrow */
+.room-badge-header {
+  font-size: 0.55rem;
+  padding: 2px 8px;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
 /* LEFT: Number ball + draw */
 .game-panel-left {
   width: 120px;
@@ -1254,27 +1299,82 @@ body {
 
 /* RIGHT: Players sidebar */
 .game-panel-right {
-  width: 42px;
+  width: 56px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 4px;
-  gap: 6px;
+  padding: 6px 6px;
+  gap: 8px;
   background: rgba(0,0,0,0.15);
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   cursor: pointer;
-  transition: width 0.25s ease;
+  transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
   scrollbar-width: none;
 }
 
 .game-panel-right.expanded {
-  width: 130px;
+  width: 120px;
   cursor: default;
 }
 
 .game-panel-right::-webkit-scrollbar { display: none; }
+
+/* Collapsed header: 👥 + count */
+.players-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.players-label-text {
+  display: none;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-panel-right.expanded .players-header {
+  flex-direction: row;
+  gap: 4px;
+}
+
+.game-panel-right.expanded .players-label-text {
+  display: inline;
+}
+
+.players-count-icon { font-size: 1.1rem; line-height: 1; }
+
+.players-count-num {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: rgba(255,255,255,0.9);
+  line-height: 1;
+}
+
+/* Avatar ribbon — hidden until expanded */
+.players-ribbon {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0;
+}
+
+.players-ribbon::-webkit-scrollbar { display: none; }
+
+.game-panel-right.expanded .players-ribbon { display: flex; }
 
 /* Current Number Ball */
 .current-number-section {
@@ -1513,13 +1613,15 @@ body {
 }
 
 /* Players Ribbon — vertical in right sidebar */
-/* Collapsed state: icon + count always visible */
 .players-sidebar-collapsed {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 1px;
+  justify-content: center;
+  gap: 3px;
   flex-shrink: 0;
+  width: 100%;
+  padding: 2px 4px;
 }
 
 .players-count-icon {
@@ -1535,15 +1637,86 @@ body {
   line-height: 1;
 }
 
-/* "Players" text label — only show when expanded */
+/* "Players" text label — always visible in one row */
 .players-sidebar-label {
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   font-weight: 700;
   color: rgba(255,255,255,0.5);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  text-align: center;
-  display: none;
+  display: block;
+}
+
+/* Expand/collapse arrow — centered on left edge of sidebar */
+.sidebar-expand-arrow {
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.9);
+  background: linear-gradient(180deg, rgba(255,107,53,0.7), rgba(255,107,53,0.4));
+  border-radius: 6px 0 0 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  z-index: 5;
+  box-shadow: -2px 0 8px rgba(255,107,53,0.4);
+  border-left: 1px solid rgba(255,107,53,0.5);
+  border-top: 1px solid rgba(255,255,255,0.15);
+  border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+
+.sidebar-expand-arrow:hover {
+  background: linear-gradient(180deg, rgba(255,107,53,0.95), rgba(255,107,53,0.7));
+  box-shadow: -3px 0 12px rgba(255,107,53,0.6);
+  left: -16px;
+}
+
+.game-panel-right.expanded .sidebar-expand-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Expand tab — zero-width sibling between center and right panels */
+.sidebar-expand-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 0;
+  z-index: 10;
+  overflow: visible;
+}
+
+.sidebar-expand-arrow {
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.95);
+  background: linear-gradient(180deg, rgba(255,107,53,0.9), rgba(255,107,53,0.6));
+  border-radius: 6px 0 0 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: -2px 0 10px rgba(255,107,53,0.5);
+  border-left: 1px solid rgba(255,107,53,0.7);
+  border-top: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(0,0,0,0.25);
+}
+
+.sidebar-expand-arrow:hover {
+  background: linear-gradient(180deg, #ff6b35, rgba(255,107,53,0.8));
+  box-shadow: -3px 0 14px rgba(255,107,53,0.7);
 }
 
 .game-panel-right.expanded .players-sidebar-label { display: block; }
@@ -1551,11 +1724,15 @@ body {
 .players-ribbon {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: none;
   align-items: center;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0;
 }
 
 .players-ribbon::-webkit-scrollbar { display: none; }
@@ -1569,14 +1746,15 @@ body {
 }
 
 .ribbon-avatar {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-heading);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);

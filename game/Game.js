@@ -36,6 +36,14 @@ class Game {
     // Game state
     this.started = false;
     this.finished = false;
+    this.fullHouseClaimed = false;
+  }
+
+  /**
+   * Finish the game (called by server after grace period).
+   */
+  finishGame() {
+    this.finished = true;
   }
 
   /**
@@ -135,9 +143,10 @@ class Game {
       }
       this.prizes[prizeType].push({ playerName, playerId, ticketIndex });
 
-      // Mark game as finished when fullHouse is claimed
+      // Don't auto-finish on fullHouse — server handles grace period
+      // Just track that at least one fullHouse was claimed
       if (prizeType === 'fullHouse') {
-        this.finished = true;
+        this.fullHouseClaimed = true;
       }
 
       return {

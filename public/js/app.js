@@ -124,7 +124,12 @@
   function showScreen(name, pushState = true) {
     document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
     const screen = document.getElementById(`screen-${name}`);
-    if (screen) screen.classList.add('active');
+    if (screen) {
+      screen.classList.add('active');
+      if (typeof Motion !== 'undefined') {
+        Motion.animateScreenIn(screen);
+      }
+    }
     currentScreen = name;
 
     // Push to browser history so back button works
@@ -448,6 +453,7 @@
     if (data.drawnNumbers && data.drawnNumbers.length > 0) {
       data.drawnNumbers.forEach(n => GameRenderer.markNumber(n));
       document.getElementById('numbers-called-count').textContent = `${data.drawnNumbers.length}/90`;
+      UI.updateRecentBalls(data.drawnNumbers);
     } else {
       document.getElementById('current-number-text').textContent = '?';
       document.getElementById('numbers-called-count').textContent = '0/90';
@@ -516,12 +522,11 @@
       document.getElementById('mute-icon-off').style.display = isMuted ? '' : 'none';
     });
 
-    // Players panel expand/collapse on click
-    const playersPanel = document.querySelector('.game-panel-right');
-    playersPanel.addEventListener('click', (e) => {
+    // Players panel — tap to expand/collapse
+    const playersPanel = document.getElementById('game-panel-right');
+    playersPanel.addEventListener('click', () => {
       playersPanel.classList.toggle('expanded');
     });
-    // Clicking the board/center collapses it
     document.querySelector('.game-panel-center')?.addEventListener('click', () => {
       playersPanel.classList.remove('expanded');
     });
@@ -688,15 +693,37 @@
     socket.on('number-drawn', (data) => {
       GameRenderer.markNumber(data.number);
       UI.updateNumberBoard(data.drawnNumbers, data.number);
+      UI.updateRecentBalls(data.drawnNumbers);
       TTS.announceNumber(data.number);
     });
 
     socket.on('prize-claimed', (data) => {
-      GameRenderer.disableClaim(data.prizeType, data.winnerName);
+      // Don't disable Full House — grace period allows multiple winners
+      if (data.prizeType !== 'fullHouse') {
+        GameRenderer.disableClaim(data.prizeType, data.winnerName);
+      }
       UI.showPrizeAnnouncement(data.message, 3500);
     });
 
+    // Full House grace period — countdown for others to claim
+    let graceInterval = null;
+    socket.on('full-house-grace', (data) => {
+      let remaining = data.seconds;
+
+      // Show initial toast
+      UI.showToast(`🏠 ${data.winnerName} got Full House! ${remaining}s for others to claim!`, 'warning', 4000);
+
+      // Update countdown
+      graceInterval = setInterval(() => {
+        remaining--;
+        const badge = document.getElementById('numbers-called-count');
+        if (badge) badge.textContent = `⏱️ ${remaining}s`;
+        if (remaining <= 0) clearInterval(graceInterval);
+      }, 1000);
+    });
+
     socket.on('game-over', (data) => {
+      if (graceInterval) clearInterval(graceInterval);
       stopCountdown();
       localStorage.removeItem('housie-session'); // game is done
       setTimeout(() => {
@@ -882,6 +909,7 @@
       GameRenderer.markNumber(n);
     });
     UI.updateNumberBoard(drawnNumbers, drawnNumbers[drawnNumbers.length - 1]);
+    UI.updateRecentBalls(drawnNumbers);
 
     // Simulate leaderboard changes every 5s (mock only)
     setInterval(() => {
@@ -906,8 +934,12 @@
 
   // ── Start ──────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    // Init socket and screens first
-    socket = io();
+    // Init socket (graceful offline handling)
+    try {
+      socket = io({ reconnection: true, reconnectionDelay: 2000, reconnectionAttempts: Infinity });
+    } catch(e) {
+      socket = { on: ()=>{}, emit: ()=>{}, connected: false };
+    }
     setupInstallPrompt();
     setupWelcomeScreen();
     setupHomeScreen();
@@ -922,7 +954,7 @@
     // Try mock mode first
     if (loadMockGame()) return;
 
-    // Normal flow
+    // Normal flow — skip welcome if name saved
     const savedName = localStorage.getItem('housie-name');
     if (savedName && savedName.trim()) {
       playerName = savedName.trim();

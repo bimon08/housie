@@ -29,6 +29,9 @@ const playerRooms = new Map(); // socketId -> roomCode
 // Auto-draw timers per room
 const autoDrawTimers = new Map(); // roomCode -> intervalId
 
+// Full House grace period timers
+const fullHouseTimers = new Map(); // roomCode -> timeoutId
+
 const AUTO_DRAW_INTERVAL = 5000; // 5 seconds between draws
 
 /**
@@ -279,12 +282,28 @@ io.on('connection', (socket) => {
         message: result.message,
       });
 
-      // If game is over, send game-over event
-      if (result.gameOver) {
+      // Full House grace period — 30s for others to also claim
+      if (prizeType === 'fullHouse' && !fullHouseTimers.has(roomCode)) {
         stopAutoDraw(roomCode);
-        io.to(roomCode).emit('game-over', {
-          winners: result.winners,
+
+        // Notify all players about the grace period
+        io.to(roomCode).emit('full-house-grace', {
+          winnerName: result.winnerName,
+          seconds: 10,
         });
+
+        const timer = setTimeout(() => {
+          fullHouseTimers.delete(roomCode);
+          const r = rooms.get(roomCode);
+          if (r && r.game) {
+            r.game.finishGame();
+            io.to(roomCode).emit('game-over', {
+              winners: r.game.getWinners(),
+            });
+          }
+        }, 10000);
+
+        fullHouseTimers.set(roomCode, timer);
       }
     }
   });
@@ -358,6 +377,10 @@ function handlePlayerLeave(socket, roomCode) {
 
   if (result.isEmpty) {
     stopAutoDraw(roomCode);
+    if (fullHouseTimers.has(roomCode)) {
+      clearTimeout(fullHouseTimers.get(roomCode));
+      fullHouseTimers.delete(roomCode);
+    }
     rooms.delete(roomCode);
     console.log(`Room ${roomCode} deleted (empty)`);
   } else {

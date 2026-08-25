@@ -1,10 +1,11 @@
-const CACHE_NAME = 'housie-v1';
+const CACHE_NAME = 'housie-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/css/style.css',
   '/js/app.js',
   '/js/game.js',
+  '/js/motion.js',
   '/js/tts.js',
   '/js/ui.js',
   '/manifest.json',

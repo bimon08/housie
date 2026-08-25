@@ -66,6 +66,7 @@ const TTS = (() => {
    * Fallback to Web Speech API if audio file fails.
    */
   function fallbackSpeak(n) {
+    if (!enabled) return;
     if (!('speechSynthesis' in window)) return;
 
     window.speechSynthesis.cancel();
@@ -131,9 +132,14 @@ const TTS = (() => {
     },
     setMuted(muted) {
       enabled = !muted;
-      if (muted && currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
+      if (muted) {
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio = null;
+        }
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
       }
     },
   };

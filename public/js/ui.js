@@ -178,8 +178,6 @@ const UI = (() => {
       const initial = getPlayerInitial(player.name);
       const isMe = player.id === currentPlayerId;
       const isLeading = idx === 0 && (player.ticketCounts || []).some(c => c > 0);
-      const el = document.createElement('div');
-      el.className = 'ribbon-player';
 
       // Build ticket count badges
       let countBadges = '';
@@ -191,9 +189,13 @@ const UI = (() => {
         }).join('');
       }
 
+      const el = document.createElement('div');
+      el.className = 'ribbon-player';
+      el.title = player.name;
+
       el.innerHTML = `
-        <div class="ribbon-avatar" style="background: ${color}; ${isMe ? 'box-shadow:0 0 0 2px #fff;' : ''}">${initial}</div>
-        <span class="ribbon-name">${isMe ? '⭐ ' : ''}${escapeHtml(player.name)}${player.isHost ? ' 👑' : ''}</span>
+        <div class="ribbon-avatar" style="background:${color};${isMe ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(255,255,255,0.3);' : ''}">${initial}</div>
+        <span class="ribbon-name">${escapeHtml(player.name)}</span>
         ${countBadges ? `<div class="ribbon-counts">${countBadges}</div>` : ''}
       `;
       ribbon.appendChild(el);
@@ -258,6 +260,34 @@ const UI = (() => {
     }
   }
 
+  /**
+   * Update the recent balls strip (last 7 numbers).
+   */
+  function updateRecentBalls(drawnNumbers) {
+    const container = document.getElementById('recent-balls');
+    if (!container) return;
+
+    const last7 = drawnNumbers.slice(-7).reverse();
+    container.innerHTML = '';
+
+    last7.forEach((n, i) => {
+      const ball = document.createElement('div');
+      ball.className = 'recent-ball';
+      ball.textContent = n;
+      // Only fade the oldest ball (last/rightmost)
+      if (i === last7.length - 1 && last7.length > 1) {
+        ball.style.opacity = '0.35';
+        ball.style.transform = 'scale(0.8)';
+      }
+      container.appendChild(ball);
+    });
+
+    // GSAP strip animation
+    if (typeof Motion !== 'undefined') {
+      Motion.animateRecentBallStrip(container);
+    }
+  }
+
   return {
     showToast,
     showPrizeAnnouncement,
@@ -268,6 +298,7 @@ const UI = (() => {
     renderPlayersRibbon,
     generateNumberBoard,
     updateNumberBoard,
+    updateRecentBalls,
     escapeHtml,
     copyToClipboard,
   };

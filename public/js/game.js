@@ -46,9 +46,14 @@ const GameRenderer = (() => {
 
     text.textContent = number;
 
-    ball.classList.remove('animate');
-    void ball.offsetWidth;
-    ball.classList.add('animate');
+    // Use GSAP if available, fallback to CSS
+    if (typeof Motion !== 'undefined') {
+      Motion.animateNumberBall(ball);
+    } else {
+      ball.classList.remove('animate');
+      void ball.offsetWidth;
+      ball.classList.add('animate');
+    }
   }
 
   /**
@@ -84,14 +89,23 @@ const GameRenderer = (() => {
     // Check if this number has been called
     if (!drawnNumbers.has(num)) {
       // Wrong tap — shake
-      cell.classList.add('shake');
-      setTimeout(() => cell.classList.remove('shake'), 400);
+      if (typeof Motion !== 'undefined') {
+        Motion.animateShake(cell);
+      } else {
+        cell.classList.add('shake');
+        setTimeout(() => cell.classList.remove('shake'), 400);
+      }
       return;
     }
 
     // Mark it!
     cell.classList.remove('callable');
     cell.classList.add('marked');
+
+    // GSAP stamp effect
+    if (typeof Motion !== 'undefined') {
+      Motion.animateMark(cell);
+    }
 
     // Update header count for this ticket
     const ticketEl = cell.closest('.ticket');

@@ -4,7 +4,7 @@
   "description": "Play Housie (Tambola) with friends! Free multiplayer game.",
   "start_url": "/",
   "id": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "landscape",
   "theme_color": "#1a5c3a",
   "background_color": "#0d4a2b",

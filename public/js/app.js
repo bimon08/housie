@@ -422,6 +422,12 @@
   function enterGame(data) {
     showScreen('game');
 
+    // Request fullscreen to hide system bars
+    try {
+      const el = document.documentElement;
+      const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (rfs) rfs.call(el).catch(() => {});
+    } catch(e) {}
     // Save session so player can rejoin if they accidentally close
     localStorage.setItem('housie-session', JSON.stringify({
       roomCode,

@@ -1,0 +1,17 @@
+{
+  "name": "housie",
+  "version": "1.0.0",
+  "description": "Housie (Tambola) Multiplayer PWA Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["housie", "tambola", "multiplayer", "game", "pwa"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="Play Housie (Tambola) with friends online! Free multiplayer game with text-to-speech number calling.">
+  <meta name="theme-color" content="#1a5c3a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="screen-orientation" content="landscape">
+  <title>Housie — Play Tambola Online!</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <div id="app">
+
+  <!-- PWA Install Prompt -->
+  <div class="install-overlay" id="install-overlay">
+    <div class="install-card">
+      <div class="install-icon">🎯</div>
+      <h1 class="install-title">HOUSIE</h1>
+      <p class="install-subtitle">Install the app for the best experience!</p>
+      <button class="btn btn-primary install-btn" id="btn-install">
+        Install App
+      </button>
+      <p class="install-ios-hint" id="install-ios-hint" style="display:none">
+        Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 0: WELCOME — Name entry only                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="screen-welcome" class="screen active">
+    <div class="home-bg-decor">
+      <div class="leaf leaf-1"></div>
+      <div class="leaf leaf-2"></div>
+      <div class="leaf leaf-3"></div>
+      <div class="leaf leaf-4"></div>
+      <div class="circle-decor c1"></div>
+      <div class="circle-decor c2"></div>
+      <div class="circle-decor c3"></div>
+    </div>
+
+    <div class="welcome-content">
+      <div class="title-banner">
+        <div class="title-ribbon">
+          <h1 class="game-title">
+            <span class="letter" style="--i:0">H</span>
+            <span class="letter" style="--i:1">O</span>
+            <span class="letter" style="--i:2">U</span>
+            <span class="letter" style="--i:3">S</span>
+            <span class="letter" style="--i:4">I</span>
+            <span class="letter" style="--i:5">E</span>
+          </h1>
+        </div>
+        <p class="subtitle">Play Tambola with Friends!</p>
+      </div>
+
+      <div class="welcome-card">
+        <label for="player-name">What's your name?</label>
+        <div class="welcome-input-row">
+          <input type="text" id="player-name" placeholder="Enter your name..." maxlength="20" autocomplete="off">
+          <button class="btn btn-continue" id="btn-continue">
+            <span>Let's Go!</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 1: HOME — Create / Join (name already set)          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="screen-home" class="screen">
+    <div class="home-bg-decor">
+      <div class="leaf leaf-1"></div>
+      <div class="leaf leaf-2"></div>
+      <div class="leaf leaf-3"></div>
+      <div class="leaf leaf-4"></div>
+      <div class="circle-decor c1"></div>
+      <div class="circle-decor c2"></div>
+      <div class="circle-decor c3"></div>
+    </div>
+
+    <div class="home-content">
+      <!-- Player greeting + settings -->
+      <div class="home-top-bar">
+        <div class="player-greeting">
+          <span class="greeting-text">Hi, <strong id="greeting-name">Player</strong>! 👋</span>
+        </div>
+        <button class="btn-icon btn-settings" id="btn-settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Continue Game Banner (shown only if saved session exists) -->
+      <div class="continue-banner" id="continue-banner" style="display:none">
+        <div class="continue-banner-inner">
+          <span class="continue-icon">🎮</span>
+          <div class="continue-text">
+            <strong id="continue-room-label">Room ????</strong>
+            <span>Game in progress — rejoin?</span>
+          </div>
+          <div class="continue-actions">
+            <button class="btn btn-continue" id="btn-continue-game">▶ Rejoin</button>
+            <button class="btn-dismiss" id="btn-dismiss-continue">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Cards — side by side in landscape -->
+      <div class="action-cards">
+        <!-- Create Game Card -->
+        <div class="action-card create-card" id="card-create">
+          <div class="card-icon">🎲</div>
+          <h2>Create Game</h2>
+          <p>Host a new game &amp; invite friends</p>
+          <div class="ticket-selector">
+            <span class="selector-label">Tickets</span>
+            <div class="selector-controls">
+              <button class="selector-btn" id="btn-tickets-minus" aria-label="Decrease tickets">−</button>
+              <span class="selector-value" id="ticket-count">2</span>
+              <button class="selector-btn" id="btn-tickets-plus" aria-label="Increase tickets">+</button>
+            </div>
+          </div>
+          <button class="btn btn-create" id="btn-create-game">
+            <span>Create Room</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <div class="cards-divider"><span>OR</span></div>
+
+        <!-- Join Game Card -->
+        <div class="action-card join-card" id="card-join">
+          <div class="card-icon">🎯</div>
+          <h2>Join Game</h2>
+          <p>Enter a room code to join</p>
+          <div class="room-code-input">
+            <input type="text" id="join-code" placeholder="1234" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+          </div>
+          <button class="btn btn-join" id="btn-join-game">
+            <span>Join Room</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SETTINGS MODAL — Change name                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="settings-modal" id="settings-modal">
+    <div class="settings-card">
+      <h3>⚙️ Settings</h3>
+      <label class="settings-label" for="settings-name">Your Name</label>
+      <input class="settings-input" type="text" id="settings-name" placeholder="Enter your name..." maxlength="20" autocomplete="off">
+      <div class="settings-actions">
+        <button class="btn btn-save-settings" id="btn-save-settings"><span>Save</span></button>
+        <button class="btn btn-cancel-settings" id="btn-cancel-settings"><span>Cancel</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 2: LOBBY                                            -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="screen-lobby" class="screen">
+    <div class="lobby-content">
+      <div class="lobby-header">
+        <button class="btn-back" id="btn-leave-lobby" aria-label="Leave room">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h2 class="lobby-title">Game Lobby</h2>
+      </div>
+
+      <div class="lobby-body">
+        <div class="lobby-left">
+          <!-- Room Code Display -->
+          <div class="room-code-display" id="room-code-display">
+            <span class="room-code-label">Room Code</span>
+            <div class="room-code-value" id="room-code-value">----</div>
+            <button class="btn-copy" id="btn-copy-code" aria-label="Copy room code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              <span>Copy</span>
+            </button>
+            <p class="share-text">Share this code with friends!</p>
+          </div>
+
+          <!-- Start Button -->
+          <div class="lobby-actions">
+            <button class="btn btn-start" id="btn-start-game" disabled>
+              <span>🎮 Start Game</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="lobby-right">
+          <!-- Players List -->
+          <div class="players-section">
+            <h3 class="players-heading">
+              <span>Players</span>
+              <span class="player-count-badge" id="player-count-badge">1</span>
+            </h3>
+            <div class="players-list" id="players-list"></div>
+          </div>
+
+          <!-- Waiting Indicator -->
+          <div class="waiting-indicator" id="waiting-indicator">
+            <div class="waiting-dots"><span></span><span></span><span></span></div>
+            <p>Waiting for players to join...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 3: GAME                                             -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="screen-game" class="screen">
+    <!-- Game Start Countdown Overlay -->
+    <div class="game-countdown-overlay" id="game-countdown-overlay">
+      <div class="game-countdown-number" id="game-countdown-number">8</div>
+      <div class="game-countdown-text">Get Ready!</div>
+    </div>
+
+    <div class="game-content">
+      <!-- Top Bar -->
+      <div class="game-header">
+        <div class="game-header-left">
+          <button class="btn-icon" id="btn-leave-game" aria-label="Leave game">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+        </div>
+        <div class="game-header-center">
+          <span class="room-badge" id="game-room-badge">🎯 Room</span>
+        </div>
+        <div class="game-header-right">
+          <span id="numbers-called-count" class="called-count-badge">0/90</span>
+          <button class="btn-icon" id="btn-mute" aria-label="Mute">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="mute-icon-on">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="mute-icon-off" style="display:none">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          </button>
+          <button class="btn-icon" id="btn-toggle-board" aria-label="Show number board">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Game Body: 3-column layout -->
+      <div class="game-body">
+
+        <!-- LEFT: Number Ball + Draw + Claim -->
+        <div class="game-panel-left">
+          <div class="number-ball" id="number-ball">
+            <span class="number-ball-value" id="current-number-text">?</span>
+          </div>
+          <!-- host draw button injected by JS -->
+          <div class="claim-buttons" id="claim-buttons">
+            <button class="claim-btn claim-full-house" data-prize="fullHouse" id="claim-fullHouse">
+              <span class="claim-label">✋<br>Full<br>House!</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CENTER: Board with tickets -->
+        <div class="game-panel-center">
+          <div class="board-surface">
+            <div class="ticket-tabs" id="ticket-tabs"></div>
+            <div class="tickets-area">
+              <div class="ticket-container" id="ticket-container"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Players -->
+        <div class="game-panel-right">
+          <div class="players-sidebar-collapsed">
+            <span class="players-count-icon">👥</span>
+            <span class="players-count-num" id="players-count-num">0</span>
+          </div>
+          <div class="players-sidebar-label">Players</div>
+          <div class="players-ribbon" id="players-ribbon"></div>
+        </div>
+
+      </div>
+
+
+    </div>
+  </div>
+
+  <!-- Number Board (Modal Overlay) -->
+  <div class="number-board-wrapper" id="number-board-wrapper">
+    <div class="number-board-modal">
+      <div class="board-modal-grid-area">
+        <div class="number-board" id="number-board"></div>
+      </div>
+      <div class="board-modal-sidebar">
+        <button class="board-modal-close" id="btn-close-board">✕</button>
+        <span class="board-modal-title-vert">Numbers Called</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 4: RESULTS                                          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="screen-results" class="screen">
+    <div class="results-content">
+      <div class="results-header">
+        <div class="confetti-container" id="confetti-container"></div>
+        <h2 class="results-title">🎉 Game Over!</h2>
+        <p class="results-subtitle">Here are the winners</p>
+      </div>
+
+      <div class="results-right">
+        <div class="winners-list" id="winners-list"></div>
+        <div class="results-actions">
+          <button class="btn btn-play-again" id="btn-play-again"><span>🔄 Replay</span></button>
+          <button class="btn btn-leave-results" id="btn-leave-results"><span>🏠 Home</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Prize Announcement Overlay -->
+  <div class="prize-overlay" id="prize-overlay">
+    <div class="prize-announcement" id="prize-announcement">
+      <div class="prize-emoji">🎉</div>
+      <div class="prize-text" id="prize-text"></div>
+    </div>
+  </div>
+
+  </div> <!-- /app -->
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/tts.js"></script>
+  <script src="/js/game.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

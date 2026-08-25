@@ -38,7 +38,8 @@
     // Already running as PWA — skip entirely
     if (isRunningAsPWA()) return;
 
-    // Dev mode — skip on localhost
+    // Install overlay disabled for now
+    return;
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
 
     // Check if previously installed (via localStorage flag)
@@ -72,7 +73,28 @@
       iosHint.style.display = 'block';
     } else {
       // Android/Chrome — use install prompt
+      btnInstall.textContent = '📲 Install App';
+
+      // Wait for beforeinstallprompt if not yet captured
+      const waitForPrompt = () => new Promise((resolve) => {
+        if (deferredInstallPrompt) return resolve(deferredInstallPrompt);
+        const timeout = setTimeout(() => resolve(null), 3000);
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          clearTimeout(timeout);
+          deferredInstallPrompt = e;
+          resolve(e);
+        }, { once: true });
+      });
+
       btnInstall.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) {
+          btnInstall.textContent = '⏳ Preparing...';
+          btnInstall.disabled = true;
+          await waitForPrompt();
+          btnInstall.disabled = false;
+        }
+
         if (deferredInstallPrompt) {
           deferredInstallPrompt.prompt();
           const result = await deferredInstallPrompt.userChoice;
@@ -82,7 +104,8 @@
           }
           deferredInstallPrompt = null;
         } else {
-          btnInstall.textContent = 'Use browser menu → Install';
+          // Prompt truly unavailable — show manual instructions
+          btnInstall.textContent = 'Tap ⋮ menu → "Add to Home Screen"';
           btnInstall.disabled = true;
         }
       });

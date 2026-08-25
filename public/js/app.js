@@ -287,9 +287,12 @@
       });
     });
 
-    // Auto-filter room code input
+    // Auto-filter room code input + auto-join on 4 digits
     joinCodeInput.addEventListener('input', () => {
       joinCodeInput.value = joinCodeInput.value.replace(/\D/g, '').slice(0, 4);
+      if (joinCodeInput.value.length === 4) {
+        btnJoin.click();
+      }
     });
 
     // Continue game (rejoin saved session)

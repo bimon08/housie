@@ -3,6 +3,56 @@
    Designed for phones held sideways (wide + short viewport)
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Portrait Rotation Overlay ────────────────────────────────── */
+.rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: linear-gradient(135deg, #0d4a2b, #1a5c3a);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .rotate-overlay { display: flex; }
+}
+
+.rotate-content {
+  text-align: center;
+  color: white;
+}
+
+.rotate-icon {
+  font-size: 4rem;
+  animation: rotatePhone 2s ease-in-out infinite;
+}
+
+.rotate-arrow {
+  font-size: 2.5rem;
+  color: var(--accent-yellow, #FFC107);
+  margin: 8px 0;
+}
+
+.rotate-content h2 {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+
+.rotate-content p {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+@keyframes rotatePhone {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50%, 75% { transform: rotate(90deg); }
+}
+
 /* ── Reset & Base ─────────────────────────────────────────────── */
 *,
 *::before,

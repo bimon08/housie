@@ -757,14 +757,121 @@
     });
 
     socket.on('disconnect', () => {
-      UI.showToast('Disconnected from server!', 'error');
+      if (currentScreen === 'game' || currentScreen === 'lobby') {
+        showReconnectingOverlay(true);
+      }
     });
 
     socket.on('connect', () => {
-      if (currentScreen !== 'welcome' && currentScreen !== 'home') {
+      // Auto-rejoin if we were in a game
+      if (currentScreen === 'game' || currentScreen === 'lobby') {
+        attemptAutoRejoin();
+      } else if (currentScreen !== 'welcome' && currentScreen !== 'home') {
         UI.showToast('Reconnected!', 'success', 2000);
       }
     });
+
+    // Handle player online/offline status from server
+    socket.on('player-status', (data) => {
+      if (!data.online) {
+        UI.showToast(`${data.playerName} went offline`, 'warning', 2500);
+      } else {
+        UI.showToast(`${data.playerName} is back! 🟢`, 'success', 2500);
+      }
+      UI.renderPlayersRibbon(data.players, playerId);
+    });
+
+    // ── Visibility / Focus Listeners ──
+    // When user returns from phone call, app switch, or lock screen
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !socket.connected) {
+        if (currentScreen === 'game' || currentScreen === 'lobby') {
+          showReconnectingOverlay(true);
+          socket.connect(); // force reconnect
+        }
+      }
+    });
+
+    // bfcache restore (iOS Safari)
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted && !socket.connected) {
+        if (currentScreen === 'game' || currentScreen === 'lobby') {
+          showReconnectingOverlay(true);
+          socket.connect();
+        }
+      }
+    });
+  }
+
+  /**
+   * Attempt to auto-rejoin the current game session.
+   */
+  function attemptAutoRejoin() {
+    const saved = localStorage.getItem('housie-session');
+    if (!saved) {
+      showReconnectingOverlay(false);
+      return;
+    }
+
+    try {
+      const session = JSON.parse(saved);
+      const name = session.playerName || playerName;
+      const code = session.roomCode || roomCode;
+
+      if (!code || !name) {
+        showReconnectingOverlay(false);
+        return;
+      }
+
+      socket.emit('rejoin-room', {
+        roomCode: code,
+        playerName: name,
+      }, (response) => {
+        showReconnectingOverlay(false);
+        if (response.success) {
+          roomCode = code;
+          playerId = response.playerId;
+          isHost = response.isHost;
+          hostName = response.hostName || session.hostName;
+          playerName = name;
+          enterGame(response);
+          UI.showToast('Back in the game! 🎉', 'success', 2000);
+
+          // Notify server we're back online
+          socket.to && socket.emit && socket.emit('player-online', { roomCode: code });
+        } else {
+          localStorage.removeItem('housie-session');
+          UI.showToast(response.message || 'Could not rejoin', 'error');
+          showScreen('home');
+        }
+      });
+    } catch {
+      showReconnectingOverlay(false);
+    }
+  }
+
+  /**
+   * Show/hide a reconnecting overlay on the game screen.
+   */
+  function showReconnectingOverlay(show) {
+    let overlay = document.getElementById('reconnecting-overlay');
+    if (show) {
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'reconnecting-overlay';
+        overlay.innerHTML = `
+          <div class="reconnecting-content">
+            <div class="reconnecting-spinner"></div>
+            <p>Reconnecting...</p>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+      }
+      overlay.classList.remove('hidden');
+    } else if (overlay) {
+      overlay.classList.add('hidden');
+      setTimeout(() => overlay.remove(), 500);
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────────

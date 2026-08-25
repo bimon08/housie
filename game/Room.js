@@ -71,7 +71,7 @@ class Room {
   }
 
   /**
-   * Rejoin a game in progress (e.g. after accidental disconnect).
+   * Rejoin a game in progress (e.g. after accidental disconnect, phone call, app switch).
    * Matches by player name, registers the new socket ID.
    * @param {string} newSocketId - New socket ID
    * @param {string} playerName - Player's name (used to find old entry)
@@ -92,10 +92,18 @@ class Room {
       return { success: false, message: 'Player not found in this room.' };
     }
 
+    // Clear any grace timer for the old socket
+    if (this._graceTimers && this._graceTimers.has(oldSocketId)) {
+      clearTimeout(this._graceTimers.get(oldSocketId));
+      this._graceTimers.delete(oldSocketId);
+    }
+
     // Re-map: remove old entry, add new socket ID
     const playerData = this.players.get(oldSocketId);
     this.players.delete(oldSocketId);
     playerData.id = newSocketId;
+    playerData.disconnected = false;
+    playerData.disconnectedAt = null;
     this.players.set(newSocketId, playerData);
 
     // Fix host if needed

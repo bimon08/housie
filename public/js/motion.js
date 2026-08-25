@@ -5,13 +5,16 @@ const Motion = (() => {
 
   /**
    * Animate the big number ball when a new number is drawn.
+   * Uses a punch/bounce effect that keeps the ball visible at all times.
    */
   function animateNumberBall(el) {
     if (!el || !gsap) return;
-    gsap.fromTo(el, 
-      { scale: 0, rotation: -180, opacity: 0 },
-      { scale: 1, rotation: 0, opacity: 1, duration: 0.6, ease: 'back.out(1.7)' }
-    );
+
+    // Quick punch-out then bounce back — ball never fully disappears
+    const tl = gsap.timeline();
+    tl.to(el, { scale: 0.3, opacity: 0.4, rotation: -20, duration: 0.12, ease: 'power2.in' })
+      .to(el, { scale: 1.15, opacity: 1, rotation: 5, duration: 0.3, ease: 'back.out(2.5)' })
+      .to(el, { scale: 1, rotation: 0, duration: 0.2, ease: 'power2.out' });
   }
 
   /**

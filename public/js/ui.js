@@ -261,30 +261,57 @@ const UI = (() => {
   }
 
   /**
-   * Update the recent balls strip (last 7 numbers).
+   * Update the recent balls strip (last 8 numbers).
+   * Incrementally updates the DOM so existing balls don't flash.
    */
   function updateRecentBalls(drawnNumbers) {
     const container = document.getElementById('recent-balls');
-    if (!container) return;
+    if (!container || !drawnNumbers || drawnNumbers.length === 0) return;
 
-    const last7 = drawnNumbers.slice(-7).reverse();
-    container.innerHTML = '';
+    const MAX_BALLS = 8;
+    const last = drawnNumbers.slice(-MAX_BALLS).reverse(); // newest first
 
-    last7.forEach((n, i) => {
+    // Get currently displayed numbers
+    const existingBalls = Array.from(container.querySelectorAll('.recent-ball'));
+
+    // Full rebuild when container is empty (first load / rejoin)
+    if (existingBalls.length === 0) {
+      container.innerHTML = '';
+      last.forEach((n) => {
+        const ball = document.createElement('div');
+        ball.className = 'recent-ball';
+        ball.textContent = n;
+        container.appendChild(ball);
+      });
+      return;
+    }
+
+    // Incremental update — check if the newest number is already shown
+    const newestNum = String(last[0]);
+    const currentFirst = existingBalls[0] ? existingBalls[0].textContent : '';
+
+    if (newestNum !== currentFirst) {
+      // Remove the 'new' class from any previous newest ball
+      existingBalls.forEach(b => b.classList.remove('new'));
+
+      // Create the new ball
       const ball = document.createElement('div');
-      ball.className = 'recent-ball';
-      ball.textContent = n;
-      // Only fade the oldest ball (last/rightmost)
-      if (i === last7.length - 1 && last7.length > 1) {
-        ball.style.opacity = '0.35';
-        ball.style.transform = 'scale(0.8)';
-      }
-      container.appendChild(ball);
-    });
+      ball.className = 'recent-ball new';
+      ball.textContent = last[0];
 
-    // GSAP strip animation
-    if (typeof Motion !== 'undefined') {
-      Motion.animateRecentBallStrip(container);
+      // Prepend (insert at the beginning)
+      container.insertBefore(ball, container.firstChild);
+
+      // Remove excess balls from the end
+      while (container.children.length > MAX_BALLS) {
+        const old = container.lastChild;
+        old.style.opacity = '0';
+        old.style.transform = 'scale(0.5)';
+        setTimeout(() => old.remove(), 300);
+      }
+
+      // Remove the 'new' class after animation completes
+      setTimeout(() => ball.classList.remove('new'), 500);
     }
   }
 

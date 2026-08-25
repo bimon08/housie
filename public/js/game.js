@@ -44,12 +44,14 @@ const GameRenderer = (() => {
     const ball = document.getElementById('number-ball');
     const text = document.getElementById('current-number-text');
 
-    text.textContent = number;
-
     // Use GSAP if available, fallback to CSS
     if (typeof Motion !== 'undefined') {
+      // Set text right away — the animation handles the visual transition
+      text.textContent = number;
       Motion.animateNumberBall(ball);
     } else {
+      // CSS fallback: swap text immediately and trigger bounce
+      text.textContent = number;
       ball.classList.remove('animate');
       void ball.offsetWidth;
       ball.classList.add('animate');

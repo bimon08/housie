@@ -1171,12 +1171,23 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.game-header-center {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .game-header-right {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .btn-icon {
@@ -1225,30 +1236,47 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 0;
 }
 
 .recent-ball {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-heading);
-  font-size: 0.5rem;
+  font-size: 0.55rem;
   font-weight: 800;
   color: #333;
   background: radial-gradient(circle at 35% 35%, #ffe066, #ffb300);
   box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.4);
-  animation: ballPop 0.3s ease-out;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Only the newest ball gets the pop-in animation */
+.recent-ball.new {
+  animation: ballPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Progressive fade for older balls */
+.recent-ball:nth-child(n+5) {
+  opacity: 0.7;
+}
+.recent-ball:nth-child(n+7) {
+  opacity: 0.4;
 }
 
 @keyframes ballPop {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 /* Room badge in header beside back arrow */
@@ -1428,14 +1456,14 @@ body {
 }
 
 .number-ball.animate {
-  animation: ballBounce 0.6s ease-out;
+  animation: ballBounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes ballBounce {
-  0%   { transform: scale(0.3) translateY(-40px); opacity: 0; }
-  40%  { transform: scale(1.12) translateY(0); opacity: 1; }
-  60%  { transform: scale(0.92); }
-  80%  { transform: scale(1.04); }
+  0%   { transform: scale(1); }
+  15%  { transform: scale(0.4); opacity: 0.5; }
+  45%  { transform: scale(1.15); opacity: 1; }
+  70%  { transform: scale(0.95); }
   100% { transform: scale(1); }
 }
 
@@ -2385,4 +2413,49 @@ body {
 
 .is-host .host-only {
   display: flex !important;
+}
+
+/* ── Reconnecting Overlay ── */
+#reconnecting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s ease;
+}
+
+#reconnecting-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reconnecting-content {
+  text-align: center;
+  color: white;
+  font-family: var(--font-body);
+}
+
+.reconnecting-content p {
+  margin-top: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.reconnecting-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ffc107;
+  border-radius: 50%;
+  animation: reconnectSpin 0.8s linear infinite;
+}
+
+@keyframes reconnectSpin {
+  to { transform: rotate(360deg); }
 }

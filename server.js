@@ -175,10 +175,11 @@ io.on('connection', (socket) => {
     playerRooms.set(socket.id, roomCode);
     socket.join(roomCode);
 
-    // Notify others
-    socket.to(roomCode).emit('player-joined', {
+    // Notify others that player is back online
+    socket.to(roomCode).emit('player-status', {
+      playerId: socket.id,
       playerName,
-      playerCount: room.players.size,
+      online: true,
       players: room.getPlayerList(),
     });
 
@@ -358,7 +359,44 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const roomCode = playerRooms.get(socket.id);
     if (roomCode) {
-      handlePlayerLeave(socket, roomCode);
+      const room = rooms.get(roomCode);
+
+      // If game is in progress, give them a grace period to reconnect
+      if (room && room.gameInProgress) {
+        const player = room.players.get(socket.id);
+        if (player) {
+          player.disconnected = true;
+          player.disconnectedAt = Date.now();
+          console.log(`Player ${player.name} disconnected from room ${roomCode} — 2min grace period`);
+
+          // Notify others that player went offline
+          socket.to(roomCode).emit('player-status', {
+            playerId: socket.id,
+            playerName: player.name,
+            online: false,
+            players: room.getPlayerList(),
+          });
+
+          // Grace period: remove after 2 minutes if they don't reconnect
+          const graceTimer = setTimeout(() => {
+            // Check if still disconnected (they might have rejoined)
+            const currentPlayer = room.players.get(socket.id);
+            if (currentPlayer && currentPlayer.disconnected) {
+              handlePlayerLeave(socket, roomCode);
+              console.log(`Grace period expired for ${player.name} in room ${roomCode}`);
+            }
+          }, 2 * 60 * 1000); // 2 minutes
+
+          // Store timer so we can clear it on rejoin
+          if (!room._graceTimers) room._graceTimers = new Map();
+          room._graceTimers.set(socket.id, graceTimer);
+        } else {
+          handlePlayerLeave(socket, roomCode);
+        }
+      } else {
+        // No active game — remove immediately
+        handlePlayerLeave(socket, roomCode);
+      }
     }
     console.log(`Player disconnected: ${socket.id}`);
   });
@@ -370,6 +408,12 @@ io.on('connection', (socket) => {
 function handlePlayerLeave(socket, roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
+
+  // Clear any grace timer
+  if (room._graceTimers && room._graceTimers.has(socket.id)) {
+    clearTimeout(room._graceTimers.get(socket.id));
+    room._graceTimers.delete(socket.id);
+  }
 
   const result = room.removePlayer(socket.id);
   playerRooms.delete(socket.id);

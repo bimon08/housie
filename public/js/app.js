@@ -449,14 +449,25 @@
     UI.renderPlayersRibbon(data.players, playerId);
     UI.updateNumberBoard(data.drawnNumbers || [], data.drawnNumbers?.[data.drawnNumbers.length - 1] || null);
 
-    // Replay any already-drawn numbers onto board
+    // Replay any already-drawn numbers onto board (rejoin scenario)
     if (data.drawnNumbers && data.drawnNumbers.length > 0) {
       data.drawnNumbers.forEach(n => GameRenderer.markNumber(n));
       document.getElementById('numbers-called-count').textContent = `${data.drawnNumbers.length}/90`;
       UI.updateRecentBalls(data.drawnNumbers);
+
+      // Restore which numbers the player had manually marked before disconnect
+      GameRenderer.restoreMarkedNumbers();
+      // Highlight any callable numbers they haven't marked yet
+      GameRenderer.highlightCallableNumbers();
     } else {
+      // Fresh game — clear old state
       document.getElementById('current-number-text').textContent = '?';
       document.getElementById('numbers-called-count').textContent = '0/90';
+      // Clear recent balls from any previous game
+      const recentBalls = document.getElementById('recent-balls');
+      if (recentBalls) recentBalls.innerHTML = '';
+      // Clear saved marked numbers from previous game
+      GameRenderer.clearMarkedNumbers();
     }
 
     document.getElementById('game-room-badge').textContent = `${hostName}'s Room`;

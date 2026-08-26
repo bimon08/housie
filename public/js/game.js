@@ -14,6 +14,8 @@ const GameRenderer = (() => {
   let activeTicketIndex = 0;
   let isHost = false;
   let onMarkCallback = null; // called with (ticketIndex, markedCount) after each mark
+  // Track which numbers the player has manually marked per ticket
+  let markedByPlayer = {}; // { ticketIndex: Set of numbers }
 
   /**
    * Initialize with player's tickets.
@@ -23,6 +25,7 @@ const GameRenderer = (() => {
     drawnNumbers = new Set();
     activeTicketIndex = 0;
     isHost = hostFlag;
+    markedByPlayer = {};
     renderAllTickets();
     resetClaimButtons();
   }
@@ -113,6 +116,12 @@ const GameRenderer = (() => {
     const ticketEl = cell.closest('.ticket');
     if (ticketEl) {
       const ticketIdx = parseInt(ticketEl.id.replace('ticket-', ''));
+
+      // Track this mark
+      if (!markedByPlayer[ticketIdx]) markedByPlayer[ticketIdx] = new Set();
+      markedByPlayer[ticketIdx].add(num);
+      saveMarkedNumbers();
+
       const grid = ticketEl.querySelector('.ticket-grid');
       const markedCount = grid.querySelectorAll('.ticket-cell.marked').length;
       const header = ticketEl.querySelector('.ticket-header span:last-child');
@@ -244,6 +253,71 @@ const GameRenderer = (() => {
     return tickets;
   }
 
+  /**
+   * Save marked numbers to localStorage for reconnection.
+   */
+  function saveMarkedNumbers() {
+    try {
+      const data = {};
+      for (const [idx, nums] of Object.entries(markedByPlayer)) {
+        data[idx] = Array.from(nums);
+      }
+      localStorage.setItem('housie-marked', JSON.stringify(data));
+    } catch (e) { /* ignore */ }
+  }
+
+  /**
+   * Restore marked numbers from localStorage after reconnection.
+   * Must be called AFTER init() and AFTER replaying drawn numbers.
+   */
+  function restoreMarkedNumbers() {
+    try {
+      const saved = localStorage.getItem('housie-marked');
+      if (!saved) return;
+      const data = JSON.parse(saved);
+
+      for (const [idx, nums] of Object.entries(data)) {
+        const ticketIdx = parseInt(idx);
+        if (!markedByPlayer[ticketIdx]) markedByPlayer[ticketIdx] = new Set();
+
+        nums.forEach(num => {
+          // Only restore if the number has actually been drawn
+          if (!drawnNumbers.has(num)) return;
+
+          markedByPlayer[ticketIdx].add(num);
+
+          // Find the cell and mark it visually
+          const grid = document.getElementById(`ticket-grid-${ticketIdx}`);
+          if (!grid) return;
+          const cell = grid.querySelector(`.ticket-cell[data-num="${num}"]`);
+          if (cell && !cell.classList.contains('marked')) {
+            cell.classList.remove('callable');
+            cell.classList.add('marked');
+          }
+        });
+
+        // Update header count
+        const grid = document.getElementById(`ticket-grid-${ticketIdx}`);
+        if (grid) {
+          const markedCount = grid.querySelectorAll('.ticket-cell.marked').length;
+          const ticketEl = document.getElementById(`ticket-${ticketIdx}`);
+          if (ticketEl) {
+            const header = ticketEl.querySelector('.ticket-header span:last-child');
+            if (header) header.textContent = `${markedCount}/15`;
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  /**
+   * Clear saved marked numbers (for new game).
+   */
+  function clearMarkedNumbers() {
+    markedByPlayer = {};
+    localStorage.removeItem('housie-marked');
+  }
+
   return {
     init,
     markNumber,
@@ -254,6 +328,9 @@ const GameRenderer = (() => {
     getTickets,
     updateCurrentNumberDisplay,
     updateNumbersCount,
+    highlightCallableNumbers,
+    restoreMarkedNumbers,
+    clearMarkedNumbers,
     setOnMark: (cb) => { onMarkCallback = cb; },
   };
 })();

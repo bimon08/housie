@@ -457,8 +457,6 @@
 
       // Restore which numbers the player had manually marked before disconnect
       GameRenderer.restoreMarkedNumbers();
-      // Highlight any callable numbers they haven't marked yet
-      GameRenderer.highlightCallableNumbers();
     } else {
       // Fresh game — clear old state
       document.getElementById('current-number-text').textContent = '?';

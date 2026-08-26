@@ -32,7 +32,7 @@ const autoDrawTimers = new Map(); // roomCode -> intervalId
 // Full House grace period timers
 const fullHouseTimers = new Map(); // roomCode -> timeoutId
 
-const AUTO_DRAW_INTERVAL = 5000; // 5 seconds between draws
+const AUTO_DRAW_INTERVAL = 8000; // 8 seconds between draws
 
 /**
  * Start auto-drawing numbers for a room.

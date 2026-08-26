@@ -1991,14 +1991,7 @@ body {
 }
 
 .ticket-cell.marked::after {
-  content: '✓';
-  position: absolute;
-  top: -2px;
-  right: 0px;
-  font-size: 0.45rem;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.7);
-  text-shadow: none;
+  display: none;
 }
 
 /* Wrong tap shake */

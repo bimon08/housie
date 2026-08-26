@@ -14,6 +14,30 @@
   let isHost = false;
   let ticketCount = 2;
   let hostName = '';
+  let wakeLock = null;
+
+  // ── Screen Wake Lock ───────────────────────────────────────────
+  async function acquireWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (e) { /* browser denied or not supported */ }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) {
+      wakeLock.release();
+      wakeLock = null;
+    }
+  }
+
+  // Re-acquire wake lock when coming back to the app
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !wakeLock && currentScreen === 'game') {
+      acquireWakeLock();
+    }
+  });
 
   // ── PWA Install ─────────────────────────────────────────────────
   let deferredInstallPrompt = null;
@@ -426,6 +450,7 @@
   // ── Game Screen ───────────────────────────────────────────────
   function enterGame(data) {
     showScreen('game');
+    acquireWakeLock(); // keep screen on during gameplay
 
     // Fullscreen on first tap (API requires user gesture)
     const gameScreen = document.getElementById('screen-game');
@@ -613,6 +638,7 @@
   // ── Results Screen ────────────────────────────────────────────
   function showResults(winners) {
     showScreen('results');
+    releaseWakeLock(); // game over, allow screen sleep
     UI.launchConfetti(80);
 
     const list = document.getElementById('winners-list');

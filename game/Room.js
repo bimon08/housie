@@ -37,10 +37,6 @@ class Room {
       return { success: false, message: 'Game already in progress!' };
     }
 
-    if (this.players.size >= 50) {
-      return { success: false, message: 'Room is full! (max 50 players)' };
-    }
-
     if (this.players.has(playerId)) {
       return { success: false, message: 'Already in this room!' };
     }

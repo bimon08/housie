@@ -23,16 +23,17 @@ class Room {
     this.gameInProgress = false;
 
     // Add host as first player
-    this.players.set(hostId, { id: hostId, name: hostName });
+    this.players.set(hostId, { id: hostId, name: hostName, deviceId: null });
   }
 
   /**
    * Add a player to the room.
    * @param {string} playerId - Socket ID
    * @param {string} playerName - Player's display name
+   * @param {string} deviceId - Unique device identifier
    * @returns {{ success: boolean, message?: string }}
    */
-  addPlayer(playerId, playerName) {
+  addPlayer(playerId, playerName, deviceId) {
     if (this.gameInProgress) {
       return { success: false, message: 'Game already in progress!' };
     }
@@ -41,7 +42,19 @@ class Room {
       return { success: false, message: 'Already in this room!' };
     }
 
-    this.players.set(playerId, { id: playerId, name: playerName });
+    // If the same device already has an entry (reconnect/duplicate tab),
+    // remove the old entry and replace with the new socket
+    if (deviceId) {
+      for (const [oldId, p] of this.players) {
+        if (p.deviceId === deviceId && oldId !== playerId) {
+          if (oldId === this.hostId) this.hostId = playerId;
+          this.players.delete(oldId);
+          break;
+        }
+      }
+    }
+
+    this.players.set(playerId, { id: playerId, name: playerName, deviceId: deviceId || null });
     return { success: true };
   }
 
@@ -68,20 +81,27 @@ class Room {
 
   /**
    * Rejoin a game in progress (e.g. after accidental disconnect, phone call, app switch).
-   * Matches by player name, registers the new socket ID.
+   * Matches by deviceId first, then by name. Registers the new socket ID.
    * @param {string} newSocketId - New socket ID
-   * @param {string} playerName - Player's name (used to find old entry)
-   * @returns {{ success: boolean, tickets?: Array, drawnNumbers?: Array, prizes?: Object, isHost?: boolean, players?: Array }}
+   * @param {string} playerName - Player's name
+   * @param {string} deviceId - Device identifier
    */
-  rejoinPlayer(newSocketId, playerName) {
+  rejoinPlayer(newSocketId, playerName, deviceId) {
     if (!this.gameInProgress) {
       return { success: false, message: 'No game in progress.' };
     }
 
-    // Find old player entry by name
+    // Find old player entry — prefer deviceId match, fall back to name
     let oldSocketId = null;
-    for (const [id, p] of this.players) {
-      if (p.name === playerName) { oldSocketId = id; break; }
+    if (deviceId) {
+      for (const [id, p] of this.players) {
+        if (p.deviceId === deviceId) { oldSocketId = id; break; }
+      }
+    }
+    if (!oldSocketId) {
+      for (const [id, p] of this.players) {
+        if (p.name === playerName) { oldSocketId = id; break; }
+      }
     }
 
     if (!oldSocketId) {

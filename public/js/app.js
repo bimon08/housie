@@ -14,9 +14,16 @@
   let isHost = false;
   let ticketCount = 2;
   let hostName = '';
+
+  // Unique device ID — persists across sessions to prevent duplicate entries
+  const deviceId = localStorage.getItem('housie-device-id') || (() => {
+    const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+    localStorage.setItem('housie-device-id', id);
+    return id;
+  })();
   let wakeLock = null;
 
-  // ── Screen Wake Lock ───────────────────────────────────────────
+  // ── Screen Wake Lock (all pages) ───────────────────────────────
   async function acquireWakeLock() {
     if (!('wakeLock' in navigator)) return;
     try {
@@ -25,16 +32,12 @@
     } catch (e) { /* browser denied or not supported */ }
   }
 
-  function releaseWakeLock() {
-    if (wakeLock) {
-      wakeLock.release();
-      wakeLock = null;
-    }
-  }
+  // Acquire on load
+  acquireWakeLock();
 
-  // Re-acquire wake lock when coming back to the app
+  // Re-acquire when coming back from phone call / app switch
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !wakeLock && currentScreen === 'game') {
+    if (document.visibilityState === 'visible' && !wakeLock) {
       acquireWakeLock();
     }
   });
@@ -274,7 +277,7 @@
     btnCreate.addEventListener('click', () => {
       btnCreate.disabled = true;
       const createTimeout = setTimeout(() => { btnCreate.disabled = false; }, 5000);
-      socket.emit('create-room', { playerName, ticketCount }, (response) => {
+      socket.emit('create-room', { playerName, ticketCount, deviceId }, (response) => {
         clearTimeout(createTimeout);
         btnCreate.disabled = false;
         if (response.success) {
@@ -300,7 +303,7 @@
 
       btnJoin.disabled = true;
       const joinTimeout = setTimeout(() => { btnJoin.disabled = false; }, 5000);
-      socket.emit('join-room', { roomCode: code, playerName }, (response) => {
+      socket.emit('join-room', { roomCode: code, playerName, deviceId }, (response) => {
         clearTimeout(joinTimeout);
         btnJoin.disabled = false;
         if (response.success) {
@@ -334,6 +337,7 @@
         socket.emit('rejoin-room', {
           roomCode: session.roomCode,
           playerName: session.playerName || playerName,
+          deviceId,
         }, (response) => {
           if (response.success) {
             roomCode = session.roomCode;
@@ -450,7 +454,6 @@
   // ── Game Screen ───────────────────────────────────────────────
   function enterGame(data) {
     showScreen('game');
-    acquireWakeLock(); // keep screen on during gameplay
 
     // Fullscreen on first tap (API requires user gesture)
     const gameScreen = document.getElementById('screen-game');
@@ -638,7 +641,6 @@
   // ── Results Screen ────────────────────────────────────────────
   function showResults(winners) {
     showScreen('results');
-    releaseWakeLock(); // game over, allow screen sleep
     UI.launchConfetti(80);
 
     const list = document.getElementById('winners-list');
@@ -861,6 +863,7 @@
       socket.emit('rejoin-room', {
         roomCode: code,
         playerName: name,
+        deviceId,
       }, (response) => {
         showReconnectingOverlay(false);
         if (response.success) {

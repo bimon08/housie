@@ -1909,7 +1909,7 @@ body {
 }
 
 .ticket.ticket-selected {
-  box-shadow: 0 0 0 3px var(--accent-cyan), 0 4px 16px rgba(0,0,0,0.3);
+  /* no visual highlight */
 }
 
 .ticket-header {

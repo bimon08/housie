@@ -15,6 +15,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
+  pingInterval: 5000,   // check connection every 5s
+  pingTimeout: 3000,    // wait 3s for pong → dead in ~8s total
 });
 
 // Serve static files
@@ -32,7 +34,7 @@ const autoDrawTimers = new Map(); // roomCode -> intervalId
 // Full House grace period timers
 const fullHouseTimers = new Map(); // roomCode -> timeoutId
 
-const AUTO_DRAW_INTERVAL = 8000; // 8 seconds between draws
+const AUTO_DRAW_INTERVAL = 7000; // 7 seconds between draws
 
 /**
  * Start auto-drawing numbers for a room.
@@ -101,9 +103,12 @@ io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
   // ── Create Room ──
-  socket.on('create-room', ({ playerName, ticketCount }, callback) => {
+  socket.on('create-room', ({ playerName, ticketCount, deviceId }, callback) => {
     const code = generateRoomCode();
     const room = new Room(code, socket.id, playerName, ticketCount || 2);
+    // Store deviceId on host
+    const host = room.players.get(socket.id);
+    if (host) host.deviceId = deviceId || null;
     rooms.set(code, room);
     playerRooms.set(socket.id, code);
 
@@ -122,7 +127,7 @@ io.on('connection', (socket) => {
   });
 
   // ── Join Room ──
-  socket.on('join-room', ({ roomCode, playerName }, callback) => {
+  socket.on('join-room', ({ roomCode, playerName, deviceId }, callback) => {
     const room = rooms.get(roomCode);
 
     if (!room) {
@@ -130,7 +135,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const result = room.addPlayer(socket.id, playerName);
+    const result = room.addPlayer(socket.id, playerName, deviceId);
     if (!result.success) {
       callback({ success: false, message: result.message });
       return;
@@ -159,14 +164,14 @@ io.on('connection', (socket) => {
   });
 
   // ── Rejoin Room (reconnect after accidental close) ──
-  socket.on('rejoin-room', ({ roomCode, playerName }, callback) => {
+  socket.on('rejoin-room', ({ roomCode, playerName, deviceId }, callback) => {
     const room = rooms.get(roomCode);
     if (!room) {
       callback({ success: false, message: 'Room no longer exists.' });
       return;
     }
 
-    const result = room.rejoinPlayer(socket.id, playerName);
+    const result = room.rejoinPlayer(socket.id, playerName, deviceId);
     if (!result.success) {
       callback({ success: false, message: result.message });
       return;

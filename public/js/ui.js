@@ -304,10 +304,7 @@ const UI = (() => {
 
       // Remove excess balls from the end
       while (container.children.length > MAX_BALLS) {
-        const old = container.lastChild;
-        old.style.opacity = '0';
-        old.style.transform = 'scale(0.5)';
-        setTimeout(() => old.remove(), 300);
+        container.lastChild.remove();
       }
 
       // Remove the 'new' class after animation completes

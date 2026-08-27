@@ -36,9 +36,34 @@
   acquireWakeLock();
 
   // Re-acquire when coming back from phone call / app switch
+  // Also mute/unmute ALL audio
+  let _savedSfxVol = null;
+  let _savedAnnounceVol = null;
+
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !wakeLock) {
-      acquireWakeLock();
+    if (document.visibilityState === 'visible') {
+      if (!wakeLock) acquireWakeLock();
+      // Restore all audio
+      if (_savedSfxVol !== null) {
+        UI.setSfxVolume(_savedSfxVol);
+        _savedSfxVol = null;
+      }
+      if (_savedAnnounceVol !== null && typeof TTS !== 'undefined') {
+        TTS.setVolume(_savedAnnounceVol);
+        _savedAnnounceVol = null;
+      }
+      if (UI && UI.getMusicVolume() > 0) UI.startMusic();
+    } else {
+      // Mute everything when app is hidden
+      if (UI) {
+        _savedSfxVol = UI.getSfxVolume();
+        UI.setSfxVolume(0);
+        UI.stopMusic();
+      }
+      if (typeof TTS !== 'undefined') {
+        _savedAnnounceVol = TTS.getVolume();
+        TTS.setVolume(0);
+      }
     }
   });
 

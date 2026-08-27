@@ -2879,6 +2879,15 @@ body {
   opacity: 0.8;
 }
 
+.results-tagline {
+  font-family: var(--font-heading);
+  color: var(--accent-yellow);
+  font-size: 1.05rem;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
 .results-right {
   flex: 1;
   display: flex;

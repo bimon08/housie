@@ -623,47 +623,75 @@ const UI = (() => {
   // ── Background Music (audio file loop) ──────────────────────────
   let musicVolume = 0;
   let musicAudio = null;
+  let gestureHandler = null;
 
   function setMusicVolume(v) {
     musicVolume = Math.max(0, Math.min(1, v));
-    if (musicAudio) {
-      musicAudio.volume = musicVolume * 0.4; // cap max so it stays subtle
-    }
-    if (musicVolume > 0 && !musicAudio) {
-      startMusic();
-    } else if (musicVolume === 0 && musicAudio) {
+    if (musicVolume === 0) {
       stopMusic();
+      return;
+    }
+    if (musicAudio) {
+      musicAudio.volume = musicVolume * 0.4;
+    } else {
+      startMusic();
     }
   }
 
   function getMusicVolume() { return musicVolume; }
 
   function startMusic() {
+    if (musicVolume === 0) {
+      stopMusic();
+      return;
+    }
     if (musicAudio) return;
+
     try {
       musicAudio = new Audio('/audio/bg-music.mp3');
       musicAudio.loop = true;
       musicAudio.volume = musicVolume * 0.4;
-      musicAudio.play().catch(() => {
-        // Autoplay blocked — will start on next user interaction
-        const startOnGesture = () => {
-          if (musicAudio && musicVolume > 0) {
-            musicAudio.play().catch(() => {});
+
+      const p = musicAudio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          // Autoplay blocked — wait for next real user touch/click
+          if (gestureHandler) {
+            document.removeEventListener('click', gestureHandler);
+            document.removeEventListener('touchstart', gestureHandler);
           }
-          document.removeEventListener('click', startOnGesture);
-        };
-        document.addEventListener('click', startOnGesture, { once: true });
-      });
+          gestureHandler = () => {
+            if (gestureHandler) {
+              document.removeEventListener('click', gestureHandler);
+              document.removeEventListener('touchstart', gestureHandler);
+              gestureHandler = null;
+            }
+            if (musicAudio && musicVolume > 0) {
+              musicAudio.play().catch(() => {});
+            } else {
+              stopMusic();
+            }
+          };
+          document.addEventListener('click', gestureHandler, { once: true });
+          document.addEventListener('touchstart', gestureHandler, { once: true });
+        });
+      }
     } catch (e) {}
   }
 
   function stopMusic() {
-    if (!musicAudio) return;
-    try {
-      musicAudio.pause();
-      musicAudio.currentTime = 0;
+    if (gestureHandler) {
+      document.removeEventListener('click', gestureHandler);
+      document.removeEventListener('touchstart', gestureHandler);
+      gestureHandler = null;
+    }
+    if (musicAudio) {
+      try {
+        musicAudio.pause();
+        musicAudio.currentTime = 0;
+      } catch (e) {}
       musicAudio = null;
-    } catch (e) {}
+    }
   }
 
   return {

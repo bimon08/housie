@@ -67,6 +67,21 @@
     }
   });
 
+  // ── Fullscreen Helper (hides mobile OS system status bar) ───────
+  function requestAppFullscreen() {
+    try {
+      const el = document.documentElement;
+      const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (rfs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        rfs.call(el).catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  // Trigger fullscreen on ANY user interaction anywhere to keep OS status bar hidden
+  document.addEventListener('touchstart', requestAppFullscreen, { passive: true });
+  document.addEventListener('click', requestAppFullscreen, { passive: true });
+
   // ── DPI / System Scaling Normalization ──────────────────────────
   // On Android, users can increase "Display Size" in settings, which
   // inflates devicePixelRatio and shrinks the CSS viewport. We detect
@@ -327,6 +342,7 @@
 
     // Create game
     btnCreate.addEventListener('click', () => {
+      requestAppFullscreen();
       btnCreate.disabled = true;
       const createTimeout = setTimeout(() => { btnCreate.disabled = false; }, 5000);
       socket.emit('create-room', { playerName, ticketCount, deviceId }, (response) => {
@@ -346,6 +362,7 @@
 
     // Join game
     function submitJoinCode() {
+      requestAppFullscreen();
       const code = joinCodeInput.value.trim();
       if (!code || code.length !== 4) {
         UI.showToast('Enter a valid 4-digit room code!', 'error');
@@ -572,6 +589,7 @@
 
     // Start game
     document.getElementById('btn-start-game').addEventListener('click', () => {
+      requestAppFullscreen();
       const btn = document.getElementById('btn-start-game');
       btn.disabled = true;
       socket.emit('start-game', { roomCode }, (response) => {
@@ -587,17 +605,12 @@
   function enterGame(data) {
     showScreen('game');
 
-    // Fullscreen on first tap (API requires user gesture)
+    // Request fullscreen immediately to hide OS system status bar
+    requestAppFullscreen();
+
+    // Also trigger on first tap if browser blocked the initial call
     const gameScreen = document.getElementById('screen-game');
-    function goFullscreen() {
-      try {
-        const el = document.documentElement;
-        const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-        if (rfs) rfs.call(el).catch(() => {});
-      } catch(e) {}
-      gameScreen.removeEventListener('click', goFullscreen);
-    }
-    gameScreen.addEventListener('click', goFullscreen, { once: true });
+    gameScreen.addEventListener('click', requestAppFullscreen, { once: true });
     // Save session so player can rejoin if they accidentally close
     localStorage.setItem('housie-session', JSON.stringify({
       roomCode,

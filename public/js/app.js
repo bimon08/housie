@@ -534,7 +534,10 @@
     if (data.prizes) {
       Object.entries(data.prizes).forEach(([prizeType, winners]) => {
         if (winners && winners.length > 0) {
-          GameRenderer.disableClaim(prizeType, winners[0].playerName);
+          // Never disable Full House — grace period allows multiple winners
+          if (prizeType !== 'fullHouse') {
+            GameRenderer.disableClaim(prizeType, winners[0].playerName);
+          }
         }
       });
     }
@@ -629,6 +632,25 @@
     document.querySelectorAll('.claim-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const prizeType = btn.dataset.prize;
+
+        // Full House: silently ignore if no ticket has all 15 numbers marked
+        if (prizeType === 'fullHouse') {
+          const tickets = GameRenderer.getTickets();
+          let hasFullHouse = false;
+          tickets.forEach((_, i) => {
+            const grid = document.getElementById(`ticket-grid-${i}`);
+            if (grid && grid.querySelectorAll('.ticket-cell.marked').length >= 15) {
+              hasFullHouse = true;
+            }
+          });
+          if (!hasFullHouse) {
+            // Subtle shake to indicate "not yet" — no error toast
+            btn.classList.add('shake');
+            setTimeout(() => btn.classList.remove('shake'), 450);
+            return;
+          }
+        }
+
         btn.disabled = true;
 
         // Support mock mode clicking Yess

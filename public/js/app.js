@@ -148,7 +148,17 @@
 
 
   // ── Screen Navigation ─────────────────────────────────────────
+  // Silent auto-update flag — set when a new SW version is detected
+  let _pendingUpdate = false;
+
   function showScreen(name, pushState = true) {
+    // Silent auto-update: reload at safe transition points (never during game)
+    if (_pendingUpdate && name !== 'game') {
+      _pendingUpdate = false;
+      window.location.reload();
+      return;
+    }
+
     document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
     const screen = document.getElementById(`screen-${name}`);
     if (screen) {
@@ -293,7 +303,7 @@
     });
 
     // Join game
-    btnJoin.addEventListener('click', () => {
+    function submitJoinCode() {
       const code = joinCodeInput.value.trim();
       if (!code || code.length !== 4) {
         UI.showToast('Enter a valid 4-digit room code!', 'error');
@@ -315,15 +325,26 @@
           enterLobby(response);
         } else {
           UI.showToast(response.message || 'Failed to join room', 'error');
+          joinCodeInput.classList.add('shake');
+          setTimeout(() => joinCodeInput.classList.remove('shake'), 450);
+          joinCodeInput.select();
         }
       });
-    });
+    }
 
-    // Auto-filter room code input + auto-join on 4 digits
+    btnJoin.addEventListener('click', submitJoinCode);
+
+    // Auto-filter room code input + auto-join immediately on 4 full digits
     joinCodeInput.addEventListener('input', () => {
       joinCodeInput.value = joinCodeInput.value.replace(/\D/g, '').slice(0, 4);
       if (joinCodeInput.value.length === 4) {
-        btnJoin.click();
+        submitJoinCode();
+      }
+    });
+
+    joinCodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        submitJoinCode();
       }
     });
 
@@ -492,6 +513,10 @@
       // Clear recent balls from any previous game
       const recentBalls = document.getElementById('recent-balls');
       if (recentBalls) recentBalls.innerHTML = '';
+      // Clear the 1-90 number board grid
+      document.querySelectorAll('.board-num').forEach((el) => {
+        el.classList.remove('called', 'latest');
+      });
       // Clear saved marked numbers from previous game
       GameRenderer.clearMarkedNumbers();
     }
@@ -526,15 +551,24 @@
     overlay.classList.remove('hidden');
     let seconds = 8;
     numEl.textContent = seconds;
+    if (typeof UI !== 'undefined' && UI.playCountdownTick) {
+      UI.playCountdownTick(8);
+    }
 
     gameCountdownTimer = setInterval(() => {
       seconds--;
       if (seconds <= 0) {
         clearInterval(gameCountdownTimer);
         gameCountdownTimer = null;
+        if (typeof UI !== 'undefined' && UI.playCountdownTick) {
+          UI.playCountdownTick(0);
+        }
         overlay.classList.add('hidden');
       } else {
         numEl.textContent = seconds;
+        if (typeof UI !== 'undefined' && UI.playCountdownTick) {
+          UI.playCountdownTick(seconds);
+        }
       }
     }, 1000);
   }
@@ -559,13 +593,24 @@
       document.getElementById('mute-icon-off').style.display = isMuted ? '' : 'none';
     });
 
-    // Players panel — tap to expand/collapse
+    // Players panel — toggle drawer
     const playersPanel = document.getElementById('game-panel-right');
-    playersPanel.addEventListener('click', () => {
-      playersPanel.classList.toggle('expanded');
-    });
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    if (toggleBtn && playersPanel) {
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playersPanel.classList.toggle('expanded');
+      });
+    }
+    if (playersPanel) {
+      playersPanel.addEventListener('click', (e) => {
+        if (!playersPanel.classList.contains('expanded')) {
+          playersPanel.classList.add('expanded');
+        }
+      });
+    }
     document.querySelector('.game-panel-center')?.addEventListener('click', () => {
-      playersPanel.classList.remove('expanded');
+      if (playersPanel) playersPanel.classList.remove('expanded');
     });
 
     // Toggle number board modal
@@ -585,6 +630,13 @@
       btn.addEventListener('click', () => {
         const prizeType = btn.dataset.prize;
         btn.disabled = true;
+
+        // Support mock mode clicking Yess
+        if (location.hash === '#game' || location.hash === '#mock' || !socket || !socket.connected) {
+          UI.recordYessClaim(playerName || 'Rahul', playerId || 'mock-0');
+          UI.showToast('🎉 YESSS!! Claimed!', 'success');
+          return;
+        }
 
         // For Full House: try each ticket in order to find one that's valid
         const tickets = GameRenderer.getTickets();
@@ -683,8 +735,13 @@
   // ── Socket Events ─────────────────────────────────────────────
   function setupSocketEvents() {
     socket.on('player-joined', (data) => {
+      // Always re-render with the authoritative server list
       UI.renderPlayerList(data.players);
-      UI.showToast(`${data.playerName} joined!`, 'info', 2000);
+
+      // Only show join toast if this isn't our own join event
+      if (data.playerName !== playerName) {
+        UI.showToast(`${data.playerName} joined!`, 'info', 2000);
+      }
 
       if (isHost) {
         document.getElementById('btn-start-game').disabled = data.playerCount < 2;
@@ -739,6 +796,7 @@
       if (data.prizeType !== 'fullHouse') {
         GameRenderer.disableClaim(data.prizeType, data.winnerName);
       }
+      UI.recordYessClaim(data.winnerName, data.playerId);
       UI.showPrizeAnnouncement(data.message, 3500);
     });
 
@@ -769,6 +827,34 @@
     });
 
     socket.on('game-reset', (data) => {
+      // Reset ALL game UI state for a fresh round
+      UI.resetYessClaims();
+
+      // Clear the 1-90 number board grid
+      document.querySelectorAll('.board-num').forEach((el) => {
+        el.classList.remove('called', 'latest');
+      });
+
+      // Clear recent balls strip
+      const recentBalls = document.getElementById('recent-balls');
+      if (recentBalls) recentBalls.innerHTML = '';
+
+      // Reset current number display
+      const numText = document.getElementById('current-number-text');
+      if (numText) numText.textContent = '?';
+      const numCount = document.getElementById('numbers-called-count');
+      if (numCount) numCount.textContent = '0/90';
+
+      // Clear leaderboard / players ribbon
+      const ribbon = document.getElementById('players-ribbon');
+      if (ribbon) ribbon.innerHTML = '';
+      const countEl = document.getElementById('players-count-num');
+      if (countEl) countEl.textContent = '0';
+
+      // Clear saved marked numbers from previous game
+      GameRenderer.clearMarkedNumbers();
+
+      // Go to lobby
       showScreen('lobby');
       UI.renderPlayerList(data.players);
       ticketCount = data.ticketCount;
@@ -1035,8 +1121,19 @@
       p.bestMarked = Math.max(...p.ticketCounts);
     });
 
-    // Sort by most marked (closest to winning) first
-    mockPlayers.sort((a, b) => b.bestMarked - a.bestMarked);
+    // Make 1 mock player already have claimed Yess (e.g. Swati) so user immediately sees it
+    const mockWinner1 = mockPlayers.find(p => p.name === 'Swati') || mockPlayers[1];
+    if (mockWinner1) {
+      mockWinner1.hasClaimedYess = true;
+      UI.recordYessClaim(mockWinner1.name, mockWinner1.id);
+    }
+
+    // Sort by Yess claims first, then most marked
+    mockPlayers.sort((a, b) => {
+      if (a.hasClaimedYess && !b.hasClaimedYess) return -1;
+      if (!a.hasClaimedYess && b.hasClaimedYess) return 1;
+      return b.bestMarked - a.bestMarked;
+    });
 
     // "You" are Rahul (mock-0), set playerId so ribbon highlights you
     playerId = 'mock-0';
@@ -1056,6 +1153,16 @@
     UI.updateNumberBoard(drawnNumbers, drawnNumbers[drawnNumbers.length - 1]);
     UI.updateRecentBalls(drawnNumbers);
 
+    // Simulate a 2nd mock player claiming Yess after 8 seconds
+    setTimeout(() => {
+      const mockWinner2 = mockPlayers.find(p => p.id !== 'mock-0' && !p.hasClaimedYess);
+      if (mockWinner2) {
+        mockWinner2.hasClaimedYess = true;
+        UI.recordYessClaim(mockWinner2.name, mockWinner2.id);
+        UI.renderPlayersRibbon(mockPlayers, playerId);
+      }
+    }, 8000);
+
     // Simulate leaderboard changes every 5s (mock only)
     setInterval(() => {
       // Each player has a chance to mark 1-2 more numbers
@@ -1067,8 +1174,12 @@
         p.bestMarked = Math.max(...p.ticketCounts);
       });
 
-      // Re-sort
-      mockPlayers.sort((a, b) => b.bestMarked - a.bestMarked);
+      // Re-sort: Yess claims first, then closest to winning
+      mockPlayers.sort((a, b) => {
+        if (a.hasClaimedYess && !b.hasClaimedYess) return -1;
+        if (!a.hasClaimedYess && b.hasClaimedYess) return 1;
+        return b.bestMarked - a.bestMarked;
+      });
 
       // Re-render ribbon
       UI.renderPlayersRibbon(mockPlayers, playerId);
@@ -1110,7 +1221,29 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        // Check for updates every 2 minutes
+        setInterval(() => { reg.update().catch(() => {}); }, 2 * 60 * 1000);
+
+        // When a new SW is found, flag for silent reload at next screen transition
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated') {
+                _pendingUpdate = true;
+              }
+            });
+          }
+        });
+      }).catch(() => {});
+
+      // Listen for SW_UPDATED message — flag for silent reload
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          _pendingUpdate = true;
+        }
+      });
     }
   });
 })();

@@ -31,7 +31,7 @@ class Room {
    * @param {string} playerId - Socket ID
    * @param {string} playerName - Player's display name
    * @param {string} deviceId - Unique device identifier
-   * @returns {{ success: boolean, message?: string }}
+   * @returns {{ success: boolean, message?: string, replacedSocketId?: string }}
    */
   addPlayer(playerId, playerName, deviceId) {
     if (this.gameInProgress) {
@@ -44,18 +44,20 @@ class Room {
 
     // If the same device already has an entry (reconnect/duplicate tab),
     // remove the old entry and replace with the new socket
+    let replacedSocketId = null;
     if (deviceId) {
       for (const [oldId, p] of this.players) {
         if (p.deviceId === deviceId && oldId !== playerId) {
           if (oldId === this.hostId) this.hostId = playerId;
           this.players.delete(oldId);
+          replacedSocketId = oldId;
           break;
         }
       }
     }
 
     this.players.set(playerId, { id: playerId, name: playerName, deviceId: deviceId || null });
-    return { success: true };
+    return { success: true, replacedSocketId };
   }
 
   /**

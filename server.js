@@ -141,26 +141,41 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // If a stale socket was replaced (same device reconnected), clean it up
+    if (result.replacedSocketId) {
+      const oldSocketId = result.replacedSocketId;
+      playerRooms.delete(oldSocketId);
+      // Remove old socket from the Socket.io room
+      const oldSocket = io.sockets.sockets.get(oldSocketId);
+      if (oldSocket) {
+        oldSocket.leave(roomCode);
+      }
+      console.log(`Replaced stale socket ${oldSocketId} for device ${deviceId} in room ${roomCode}`);
+    }
+
     playerRooms.set(socket.id, roomCode);
     socket.join(roomCode);
+
+    const playerList = room.getPlayerList();
 
     callback({
       success: true,
       playerId: socket.id,
-      players: room.getPlayerList(),
+      players: playerList,
       ticketCount: room.ticketCount,
       hostName: room.players.get(room.hostId)?.name || 'Host',
       isHost: false,
     });
 
-    // Notify others
-    socket.to(roomCode).emit('player-joined', {
+    // Notify ALL clients in the room (including sender) with authoritative player list
+    // Using io.to() ensures everyone has the same count
+    io.to(roomCode).emit('player-joined', {
       playerName,
       playerCount: room.players.size,
-      players: room.getPlayerList(),
+      players: playerList,
     });
 
-    console.log(`${playerName} joined room ${roomCode}`);
+    console.log(`${playerName} joined room ${roomCode} (${room.players.size} players)`);
   });
 
   // ── Rejoin Room (reconnect after accidental close) ──
@@ -281,12 +296,37 @@ io.on('connection', (socket) => {
     callback(result);
 
     if (result.valid) {
+      const player = room.players.get(socket.id);
+      if (player) player.hasClaimedYess = true;
+
       // Broadcast prize claim to all players
       io.to(roomCode).emit('prize-claimed', {
         prizeType: result.prizeType,
         winnerName: result.winnerName,
+        playerId: socket.id,
         message: result.message,
       });
+
+      // Broadcast updated leaderboard with hasClaimedYess status
+      const leaderboard = [];
+      for (const [id, p] of room.players) {
+        const counts = p.ticketCounts || [];
+        const bestMarked = counts.length > 0 ? Math.max(...counts) : 0;
+        leaderboard.push({
+          id,
+          name: p.name,
+          isHost: id === room.hostId,
+          ticketCounts: counts,
+          bestMarked,
+          hasClaimedYess: !!p.hasClaimedYess,
+        });
+      }
+      leaderboard.sort((a, b) => {
+        if (a.hasClaimedYess && !b.hasClaimedYess) return -1;
+        if (!a.hasClaimedYess && b.hasClaimedYess) return 1;
+        return b.bestMarked - a.bestMarked;
+      });
+      io.to(roomCode).emit('leaderboard-update', { leaderboard });
 
       // Full House grace period — 30s for others to also claim
       if (prizeType === 'fullHouse' && !fullHouseTimers.has(roomCode)) {
@@ -313,6 +353,7 @@ io.on('connection', (socket) => {
       }
     }
   });
+
   // ── Player Mark Progress ──
   socket.on('player-progress', ({ roomCode, ticketCounts }) => {
     const room = rooms.get(roomCode);
@@ -323,14 +364,25 @@ io.on('connection', (socket) => {
     // Store per-ticket marked counts (e.g. [12, 9])
     player.ticketCounts = ticketCounts;
 
-    // Build leaderboard sorted by most marked (closest to winning)
+    // Build leaderboard sorted by Yess claims first, then most marked
     const leaderboard = [];
     for (const [id, p] of room.players) {
       const counts = p.ticketCounts || [];
       const bestMarked = counts.length > 0 ? Math.max(...counts) : 0;
-      leaderboard.push({ id, name: p.name, isHost: id === room.hostId, ticketCounts: counts, bestMarked });
+      leaderboard.push({
+        id,
+        name: p.name,
+        isHost: id === room.hostId,
+        ticketCounts: counts,
+        bestMarked,
+        hasClaimedYess: !!p.hasClaimedYess,
+      });
     }
-    leaderboard.sort((a, b) => b.bestMarked - a.bestMarked);
+    leaderboard.sort((a, b) => {
+      if (a.hasClaimedYess && !b.hasClaimedYess) return -1;
+      if (!a.hasClaimedYess && b.hasClaimedYess) return 1;
+      return b.bestMarked - a.bestMarked;
+    });
 
     io.to(roomCode).emit('leaderboard-update', { leaderboard });
   });

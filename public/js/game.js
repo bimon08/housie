@@ -93,7 +93,8 @@ const GameRenderer = (() => {
 
     // Check if this number has been called
     if (!drawnNumbers.has(num)) {
-      // Wrong tap — shake
+      // Wrong tap — shake & error sound
+      if (typeof UI !== 'undefined' && UI.playErrorSound) UI.playErrorSound();
       if (typeof Motion !== 'undefined') {
         Motion.animateShake(cell);
       } else {
@@ -103,7 +104,8 @@ const GameRenderer = (() => {
       return;
     }
 
-    // Mark it!
+    // Mark it & play satisfying stamp sound!
+    if (typeof UI !== 'undefined' && UI.playStampSound) UI.playStampSound();
     cell.classList.remove('callable');
     cell.classList.add('marked');
 
@@ -124,8 +126,30 @@ const GameRenderer = (() => {
 
       const grid = ticketEl.querySelector('.ticket-grid');
       const markedCount = grid.querySelectorAll('.ticket-cell.marked').length;
-      const header = ticketEl.querySelector('.ticket-header span:last-child');
-      if (header) header.textContent = `${markedCount}/15`;
+      const headerBadge = ticketEl.querySelector('.ticket-progress-badge');
+      if (headerBadge) {
+        if (markedCount === 14) {
+          headerBadge.className = 'ticket-progress-badge one-left';
+          headerBadge.innerHTML = `<span class="marked-num">14</span>/15 <span class="badge-sub">1 LEFT! 🔥</span>`;
+        } else if (markedCount === 15) {
+          headerBadge.className = 'ticket-progress-badge full-house';
+          headerBadge.innerHTML = `FULL HOUSE! 👑 <span class="yess-tooltip">YESSS!! 🎉</span>`;
+        } else {
+          headerBadge.className = 'ticket-progress-badge';
+          headerBadge.innerHTML = `<span class="marked-num">${markedCount}</span>/15`;
+        }
+      }
+
+      // Highlight the single remaining number cell when 1 is left
+      if (markedCount === 14) {
+        grid.querySelectorAll('.ticket-cell[data-num]:not(.marked)').forEach(c => {
+          c.classList.add('last-target');
+        });
+      } else {
+        grid.querySelectorAll('.ticket-cell.last-target').forEach(c => {
+          c.classList.remove('last-target');
+        });
+      }
 
       // Notify app.js so it can emit progress
       if (onMarkCallback) onMarkCallback(ticketIdx, markedCount);
@@ -133,38 +157,56 @@ const GameRenderer = (() => {
   }
 
   /**
-   * Render all tickets stacked vertically (no tabs).
+   * Render all tickets.
    */
   function renderAllTickets() {
-    const tabsEl = document.getElementById('ticket-tabs');
-    tabsEl.style.display = 'none';
-
     const container = document.getElementById('ticket-container');
+    if (!container) return;
     container.innerHTML = '';
 
     tickets.forEach((ticket, idx) => {
       const ticketEl = createTicketElement(ticket, idx);
-      // Tap a ticket to select it for claims
       ticketEl.addEventListener('click', (e) => {
-        // If they tapped a number cell, handle marking
         const cell = e.target.closest('.ticket-cell[data-num]');
         if (cell) {
           handleCellClick(cell);
           e.stopPropagation();
         }
-        // Select this ticket for claims
-        activeTicketIndex = idx;
-        container.querySelectorAll('.ticket').forEach((t, i) => {
-          t.classList.toggle('ticket-selected', i === idx);
-        });
+        selectTicket(idx, false);
       });
       if (idx === 0) ticketEl.classList.add('ticket-selected');
       container.appendChild(ticketEl);
     });
 
-    // Ensure scroll starts at Ticket 1
     const ticketsArea = document.querySelector('.tickets-area');
     if (ticketsArea) ticketsArea.scrollTop = 0;
+  }
+
+  /**
+   * Select a specific ticket as active.
+   */
+  function selectTicket(index, scroll = true) {
+    activeTicketIndex = index;
+    const container = document.getElementById('ticket-container');
+    if (container) {
+      container.querySelectorAll('.ticket').forEach((t, i) => {
+        t.classList.toggle('ticket-selected', i === index);
+      });
+    }
+
+    const tabsEl = document.getElementById('ticket-tabs');
+    if (tabsEl) {
+      tabsEl.querySelectorAll('.ticket-tab-chip').forEach((t, i) => {
+        t.classList.toggle('active', i === index);
+      });
+    }
+
+    if (scroll) {
+      const targetTicket = document.getElementById(`ticket-${index}`);
+      if (targetTicket) {
+        targetTicket.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
   }
 
   /**
@@ -177,8 +219,13 @@ const GameRenderer = (() => {
 
     el.innerHTML = `
       <div class="ticket-header">
-        <span>Ticket ${index + 1}</span>
-        <span>0/15</span>
+        <div class="ticket-title-wrap">
+          <span class="ticket-icon">🎟️</span>
+          <span class="ticket-name">TICKET ${index + 1}</span>
+        </div>
+        <div class="ticket-progress-badge">
+          <span class="marked-num">0</span>/15
+        </div>
       </div>
       <div class="ticket-grid" id="ticket-grid-${index}">
         ${buildTicketGrid(ticket)}

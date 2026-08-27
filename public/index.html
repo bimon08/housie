@@ -106,10 +106,10 @@
         <div class="player-greeting">
           <span class="greeting-text">Hi, <strong id="greeting-name">Player</strong>! 👋</span>
         </div>
-        <button class="btn-icon btn-settings" id="btn-settings" aria-label="Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="btn-icon btn-settings" id="btn-settings" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
       </div>
@@ -156,11 +156,11 @@
         <div class="action-card join-card" id="card-join">
           <div class="card-icon">🎯</div>
           <h2>Join Game</h2>
-          <p>Enter a room code to join</p>
+          <p>Enter 4-digit room code to join</p>
           <div class="room-code-input">
             <input type="text" id="join-code" placeholder="Code" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
           </div>
-          <button class="btn btn-join" id="btn-join-game">
+          <button class="btn btn-join" id="btn-join-game" style="display: none;">
             <span>Join Room</span>
             <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
@@ -241,27 +241,43 @@
   <!-- SCREEN 3: GAME                                             -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <div id="screen-game" class="screen">
+    <!-- Ambient glowing backdrop effect -->
+    <div class="game-ambient-glow"></div>
+
     <!-- Game Start Countdown Overlay -->
     <div class="game-countdown-overlay" id="game-countdown-overlay">
+      <div class="countdown-pulse-ring"></div>
       <div class="game-countdown-number" id="game-countdown-number">8</div>
-      <div class="game-countdown-text">Get Ready!</div>
+      <div class="game-countdown-text">Game Starting... Get Ready!</div>
+      <div class="countdown-subtext">Tap your numbers as they appear</div>
     </div>
 
     <div class="game-content">
-      <!-- Top Bar -->
-      <div class="game-header">
+      <!-- Top Control Bar -->
+      <header class="game-header">
         <div class="game-header-left">
-          <button class="btn-icon" id="btn-leave-game" aria-label="Leave game">
+          <button class="btn-icon header-btn" id="btn-leave-game" title="Leave Game" aria-label="Leave game">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
-          <span class="room-badge room-badge-header" id="game-room-badge">🎯 Room</span>
+          <div class="room-badge-pill">
+            <span class="room-dot"></span>
+            <span class="room-badge-text" id="game-room-badge">Room</span>
+          </div>
         </div>
+
         <div class="game-header-center">
-          <div class="recent-balls" id="recent-balls"></div>
+          <div class="recent-balls-wrapper">
+            <span class="recent-label">HISTORY</span>
+            <div class="recent-balls" id="recent-balls"></div>
+          </div>
         </div>
+
         <div class="game-header-right">
-          <span id="numbers-called-count" class="called-count-badge">0/90</span>
-          <button class="btn-icon" id="btn-mute" aria-label="Mute">
+          <div class="counter-badge-wrap" title="Called numbers count">
+            <span class="counter-icon">🎱</span>
+            <span id="numbers-called-count" class="called-count-badge">0/90</span>
+          </div>
+          <button class="btn-icon header-btn" id="btn-mute" title="Sound On/Off" aria-label="Mute">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="mute-icon-on">
               <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
             </svg>
@@ -269,53 +285,84 @@
               <path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
             </svg>
           </button>
-          <button class="btn-icon" id="btn-toggle-board" aria-label="Show number board">
+          <button class="btn-icon header-btn" id="btn-toggle-board" title="View 1-90 Number Board" aria-label="Show number board">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
             </svg>
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- Game Body: 3-column layout -->
-      <div class="game-body">
+      <!-- Game Body: 3-column gaming layout -->
+      <main class="game-body">
 
-        <!-- LEFT: Room + Number Ball + Draw + Claim -->
-        <div class="game-panel-left">
-          <div class="number-ball" id="number-ball">
-            <span class="number-ball-value" id="current-number-text">?</span>
+        <!-- LEFT: 3D Number Ball Showcase & Action Deck -->
+        <aside class="game-panel-left">
+          <div class="ball-stage-card">
+            <span class="stage-tag">NOW CALLING</span>
+            <div class="number-ball-container">
+              <div class="ball-glow-ring"></div>
+              <div class="number-ball" id="number-ball">
+                <div class="ball-specular"></div>
+                <span class="number-ball-value" id="current-number-text">?</span>
+              </div>
+            </div>
+            <div class="stage-info-pill">
+              <span class="stage-info-dot"></span>
+              <span>AUTO CALLING</span>
+            </div>
           </div>
-          <!-- host draw button injected by JS -->
-          <div class="claim-buttons" id="claim-buttons">
-            <button class="claim-btn claim-full-house" data-prize="fullHouse" id="claim-fullHouse">
-              <span class="claim-label">✋<br>Yesss!</span>
-            </button>
-          </div>
-        </div>
 
-        <!-- CENTER: Board with tickets -->
-        <div class="game-panel-center">
+          <!-- Claim Actions -->
+          <div class="claim-deck">
+            <div class="claim-buttons" id="claim-buttons">
+              <button class="claim-btn claim-full-house" data-prize="fullHouse" id="claim-fullHouse">
+                <div class="claim-btn-inner">
+                  <div class="claim-icon-wrap">
+                    <span class="claim-icon">✋</span>
+                  </div>
+                  <span class="claim-main-title">Yess!!</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- CENTER: Velvet Board with Tickets -->
+        <section class="game-panel-center">
           <div class="board-surface">
-            <div class="ticket-tabs" id="ticket-tabs"></div>
+            <!-- Ticket playfield -->
             <div class="tickets-area">
               <div class="ticket-container" id="ticket-container"></div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- RIGHT: Players (collapsible) -->
-        <div class="game-panel-right" id="game-panel-right">
-          <div class="players-header" id="players-header">
-            <span class="players-count-icon">👥</span>
-            <span class="players-count-num" id="players-count-num">0</span>
-            <span class="players-label-text">Players</span>
+        <!-- RIGHT: Live Players Leaderboard (Drawer) -->
+        <aside class="game-panel-right" id="game-panel-right">
+          <!-- Floating YESSS! overlay outside of scroll container -->
+          <div class="yess-bubbles-overlay" id="yess-bubbles-overlay"></div>
+
+          <button class="sidebar-toggle-handle" id="sidebar-toggle-btn" aria-label="Toggle Players Panel">
+            <svg class="toggle-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+
+          <div class="players-sidebar-content">
+            <div class="players-header" id="players-header">
+              <div class="players-header-badge">
+                <span class="players-count-icon">👥</span>
+                <span class="players-count-num" id="players-count-num">0</span>
+              </div>
+              <span class="players-label-text">LIVE LEADERBOARD</span>
+            </div>
+            <div class="players-ribbon" id="players-ribbon"></div>
           </div>
-          <div class="players-ribbon" id="players-ribbon"></div>
-        </div>
+        </aside>
 
-      </div>
-
+      </main>
 
     </div>
   </div>
@@ -323,12 +370,20 @@
   <!-- Number Board (Modal Overlay) -->
   <div class="number-board-wrapper" id="number-board-wrapper">
     <div class="number-board-modal">
-      <div class="board-modal-grid-area">
+      <div class="board-modal-main">
         <div class="number-board" id="number-board"></div>
       </div>
       <div class="board-modal-sidebar">
-        <button class="board-modal-close" id="btn-close-board">✕</button>
-        <span class="board-modal-title-vert">Numbers Called</span>
+        <button class="board-modal-close" id="btn-close-board" aria-label="Close board" title="Close">✕</button>
+        <div class="board-vertical-title-wrap">
+          <span class="board-title-icon">🔢</span>
+          <span class="board-vertical-title">NUMBER CALL (1-90)</span>
+        </div>
+        <div class="board-modal-legend">
+          <div class="legend-item" title="Called Number"><span class="legend-dot called-dot"></span> Called</div>
+          <div class="legend-item" title="Latest Drawn Number"><span class="legend-dot latest-dot"></span> Latest</div>
+          <div class="legend-item" title="Remaining Number"><span class="legend-dot uncalled-dot"></span> Left</div>
+        </div>
       </div>
     </div>
   </div>

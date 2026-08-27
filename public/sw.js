@@ -1,4 +1,4 @@
-const CACHE_NAME = 'housie-v8';
+const CACHE_NAME = 'housie-v9';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -13,7 +13,7 @@ const STATIC_ASSETS = [
   '/icons/icon-512.png',
 ];
 
-// Install — cache static assets
+// Install — cache static assets, skip waiting immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -23,19 +23,26 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate — clean old caches
+// Activate — clean old caches, claim clients, notify them to reload
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
+    }).then(() => {
+      // Notify all open tabs/windows that a new version is active
+      return self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SW_UPDATED' });
+        });
+      });
     })
   );
   self.clients.claim();
 });
 
-// Fetch — cache-first for static, network-first for API/socket
+// Fetch — NETWORK-FIRST for app files, cache as fallback for offline
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -48,29 +55,18 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        // Return cached but also update in background
-        const fetchPromise = fetch(event.request)
-          .then((response) => {
-            if (response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-            }
-            return response;
-          })
-          .catch(() => cached);
-
-        return cached;
-      }
-
-      return fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
+        // Got fresh response — cache it and return
         if (response.ok && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => {
+        // Network failed (offline) — fall back to cache
+        return caches.match(event.request);
+      })
   );
 });

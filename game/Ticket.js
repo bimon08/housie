@@ -33,6 +33,8 @@ class TicketGenerator {
 
   /**
    * Generate a set of tickets for a game.
+   * Numbers CAN repeat across tickets, but no two tickets will have
+   * the exact same set of numbers in any column.
    * @param {number} playerCount - Number of players
    * @param {number} ticketsPerPlayer - Number of tickets each player gets
    * @returns {Array<Array<Array<number|null>>>} Array of tickets, each ticket is 3x9
@@ -40,10 +42,15 @@ class TicketGenerator {
   generateTickets(playerCount, ticketsPerPlayer) {
     const totalTickets = playerCount * ticketsPerPlayer;
     const tickets = [];
-    const usedNumbers = new Set();
+
+    // Track used column combos: usedColumnCombos[col] = Set of "1,5,9" strings
+    const usedColumnCombos = [];
+    for (let col = 0; col < 9; col++) {
+      usedColumnCombos.push(new Set());
+    }
 
     for (let i = 0; i < totalTickets; i++) {
-      const ticket = this._generateSingleTicket(usedNumbers);
+      const ticket = this._generateSingleTicket(usedColumnCombos);
       tickets.push(ticket);
     }
 
@@ -52,67 +59,83 @@ class TicketGenerator {
 
   /**
    * Generate a single valid Housie ticket.
-   * @param {Set<number>} usedNumbers - Numbers already used in other tickets
+   * @param {Array<Set<string>>} usedColumnCombos - Used column combos per column
    * @returns {Array<Array<number|null>>} 3x9 grid (null = blank cell)
    */
-  _generateSingleTicket(usedNumbers) {
+  _generateSingleTicket(usedColumnCombos) {
     let attempts = 0;
-    const maxAttempts = 100;
+    const maxAttempts = 200;
 
     while (attempts < maxAttempts) {
       attempts++;
-      const ticket = this._tryGenerateTicket(usedNumbers);
+      const ticket = this._tryGenerateTicket(usedColumnCombos);
       if (ticket) {
-        // Mark all numbers on this ticket as used
-        for (let row = 0; row < 3; row++) {
-          for (let col = 0; col < 9; col++) {
-            if (ticket[row][col] !== null) {
-              usedNumbers.add(ticket[row][col]);
-            }
+        // Record column combos
+        for (let col = 0; col < 9; col++) {
+          const nums = [];
+          for (let row = 0; row < 3; row++) {
+            if (ticket[row][col] !== null) nums.push(ticket[row][col]);
+          }
+          if (nums.length > 0) {
+            usedColumnCombos[col].add(nums.sort((a, b) => a - b).join(','));
           }
         }
         return ticket;
       }
     }
 
-    // Fallback: generate without uniqueness constraint
-    // (only happens if we're generating many tickets)
-    return this._tryGenerateTicket(new Set());
+    // Fallback: generate without column-combo constraint
+    return this._tryGenerateTicket(null);
   }
 
   /**
-   * Attempt to generate a single ticket.
-   * @param {Set<number>} usedNumbers - Numbers to avoid
+   * Attempt to generate a single ticket with maximum spread.
+   * @param {Array<Set<string>>|null} usedColumnCombos - Column combos to avoid (null = no constraint)
    * @returns {Array<Array<number|null>>|null} Ticket or null if failed
    */
-  _tryGenerateTicket(usedNumbers) {
-    // Step 1: For each column, pick available numbers
+  _tryGenerateTicket(usedColumnCombos) {
+    // Step 1: For each column, get all numbers in range
     const columnNumbers = [];
     for (let col = 0; col < 9; col++) {
       const { min, max } = this.columnRanges[col];
       const available = [];
       for (let n = min; n <= max; n++) {
-        if (!usedNumbers.has(n)) {
-          available.push(n);
-        }
+        available.push(n);
       }
       columnNumbers.push(available);
     }
 
     // Step 2: Decide how many numbers each column will have (1, 2, or 3)
-    // We need exactly 15 numbers total, 5 per row
     const columnCounts = this._distributeColumnCounts(columnNumbers);
     if (!columnCounts) return null;
 
-    // Step 3: Pick random numbers for each column
+    // Step 3: Pick random numbers for each column, avoiding used combos
     const selectedNumbers = [];
     for (let col = 0; col < 9; col++) {
       const count = columnCounts[col];
       const available = columnNumbers[col];
       if (available.length < count) return null;
 
-      const shuffled = this._shuffle([...available]);
-      const picked = shuffled.slice(0, count).sort((a, b) => a - b);
+      // Try to find a combination not already used in this column
+      let picked = null;
+      const maxPickAttempts = 20;
+      for (let p = 0; p < maxPickAttempts; p++) {
+        const shuffled = this._shuffle([...available]);
+        const candidate = shuffled.slice(0, count).sort((a, b) => a - b);
+        const key = candidate.join(',');
+
+        if (!usedColumnCombos || !usedColumnCombos[col].has(key)) {
+          picked = candidate;
+          break;
+        }
+      }
+
+      if (!picked) {
+        // Accept any combination if we can't find a unique one
+        const shuffled = this._shuffle([...available]);
+        picked = shuffled.slice(0, count).sort((a, b) => a - b);
+      }
+
       selectedNumbers.push(picked);
     }
 
@@ -124,32 +147,46 @@ class TicketGenerator {
   /**
    * Distribute column counts such that total = 15 and each row has exactly 5.
    * Each column gets 1-3 numbers.
+   * SPREAD STRATEGY: Maximize coverage across all 9 columns by distributing
+   * numbers as evenly as possible (prefer 1-2 per column over 3 in some and 0 in none).
    * @param {Array<Array<number>>} columnNumbers - Available numbers per column
    * @returns {Array<number>|null} Count per column or null if impossible
    */
   _distributeColumnCounts(columnNumbers) {
-    // Start with 1 per column (9 total), need 6 more to reach 15
-    const counts = new Array(9).fill(1);
-    let remaining = 6; // 15 - 9
-
     // Check each column has at least 1 available number
     for (let col = 0; col < 9; col++) {
       if (columnNumbers[col].length < 1) return null;
     }
 
-    // Randomly add extra numbers to columns (up to 3 per column)
-    const shuffledCols = this._shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    for (const col of shuffledCols) {
+    // Start with 1 per column (9 total), need 6 more to reach 15
+    const counts = new Array(9).fill(1);
+    let remaining = 6; // 15 - 9
+
+    // SPREAD: First, try to bring every column to 2 before any column gets 3.
+    const cols = this._shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+
+    // Round 1: give each column a 2nd number (up to 6 columns)
+    for (const col of cols) {
       if (remaining <= 0) break;
-      const maxExtra = Math.min(2, columnNumbers[col].length - counts[col], remaining);
-      if (maxExtra > 0) {
-        const extra = Math.ceil(Math.random() * maxExtra);
-        counts[col] += extra;
-        remaining -= extra;
+      if (counts[col] < 2 && columnNumbers[col].length >= 2) {
+        counts[col] = 2;
+        remaining--;
       }
     }
 
-    // If we still need more, try adding to columns that can take more
+    // Round 2: if still remaining, give a 3rd number to columns that can hold it
+    if (remaining > 0) {
+      const cols2 = this._shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+      for (const col of cols2) {
+        if (remaining <= 0) break;
+        if (counts[col] < 3 && columnNumbers[col].length >= 3) {
+          counts[col] = 3;
+          remaining--;
+        }
+      }
+    }
+
+    // Round 3: last resort — fill anywhere possible
     while (remaining > 0) {
       let added = false;
       for (let col = 0; col < 9; col++) {

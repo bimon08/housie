@@ -353,9 +353,9 @@
           playerId = response.playerId;
           isHost = true;
           hostName = response.hostName || playerName;
-          if (typeof Analytics !== 'undefined') {
-            Analytics.identify(playerId, { name: playerName });
-            Analytics.track('room_created', { ticketCount, roomCode });
+          if (typeof window.Analytics !== 'undefined') {
+            window.Analytics.identify(playerId, { name: playerName });
+            window.Analytics.track('room_created', { ticketCount, roomCode });
           }
           enterLobby(response);
         } else {
@@ -383,9 +383,9 @@
           roomCode = code;
           playerId = response.playerId;
           isHost = false;
-          if (typeof Analytics !== 'undefined') {
-            Analytics.identify(playerId, { name: playerName });
-            Analytics.track('room_joined', { roomCode: code });
+          if (typeof window.Analytics !== 'undefined') {
+            window.Analytics.identify(playerId, { name: playerName });
+            window.Analytics.track('room_joined', { roomCode: code });
           }
           ticketCount = response.ticketCount;
           hostName = response.hostName || 'Host';
@@ -611,8 +611,8 @@
   // ── Game Screen ───────────────────────────────────────────────
   function enterGame(data) {
     showScreen('game');
-    if (typeof Analytics !== 'undefined') {
-      Analytics.track('game_started', { roomCode, isHost });
+    if (typeof window.Analytics !== 'undefined') {
+      window.Analytics.track('game_started', { roomCode, isHost });
     }
 
     // Request fullscreen immediately to hide OS system status bar
@@ -850,8 +850,8 @@
   function showResults(winners) {
     showScreen('results');
     UI.launchConfetti(80);
-    if (typeof Analytics !== 'undefined') {
-      Analytics.track('game_completed', { roomCode });
+    if (typeof window.Analytics !== 'undefined') {
+      window.Analytics.track('game_completed', { roomCode });
     }
 
     const list = document.getElementById('winners-list');

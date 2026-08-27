@@ -512,7 +512,6 @@
     btnSettings.addEventListener('click', () => {
       nameInput.value = playerName;
       modal.classList.add('active');
-      nameInput.focus();
     });
 
     btnSave.addEventListener('click', () => {

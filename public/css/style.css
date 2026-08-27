@@ -440,11 +440,12 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 2500; /* Always above game elements, sidebars, and overlays */
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .settings-modal.active {
@@ -455,37 +456,40 @@ body {
 .settings-card {
   background: var(--surface);
   border-radius: var(--radius-lg);
-  padding: 20px 24px;
-  width: 90%;
-  max-width: 320px;
+  padding: 16px 20px;
+  width: 92%;
+  max-width: 360px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
   box-shadow: var(--shadow-lg);
   animation: prizePopIn 0.3s ease-out;
 }
 
 .settings-card h3 {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: var(--text-dark);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .settings-label {
   display: block;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--text-medium);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 5px;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
 }
 
 .settings-input {
   width: 100%;
   border: 2px solid transparent;
   border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: 7px 10px;
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   background: #fff;
   color: var(--text-dark);
@@ -513,7 +517,7 @@ body {
   flex: 1;
   background: linear-gradient(135deg, var(--accent-green), #66bb6a);
   color: white;
-  padding: 10px 16px;
+  padding: 9px 14px;
   font-size: 0.82rem;
 }
 
@@ -521,48 +525,51 @@ body {
   flex: 1;
   background: rgba(0, 0, 0, 0.08);
   color: var(--text-medium);
-  padding: 10px 16px;
+  padding: 9px 14px;
   font-size: 0.82rem;
 }
 
 /* ── Volume Controls ──────────────────────────────────────────── */
 .settings-volumes {
-  margin-top: 14px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .volume-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .volume-icon {
-  font-size: 0.9rem;
-  width: 22px;
+  font-size: 0.85rem;
+  width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
 
 .volume-label {
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--text-medium);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  width: 85px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  min-width: 98px;
   flex-shrink: 0;
 }
 
 .volume-slider {
   flex: 1;
+  min-width: 0;
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.12);
   outline: none;
 }
 
@@ -593,7 +600,7 @@ body {
   font-weight: 700;
   font-size: 0.65rem;
   color: var(--text-medium);
-  width: 30px;
+  width: 32px;
   text-align: right;
   flex-shrink: 0;
 }

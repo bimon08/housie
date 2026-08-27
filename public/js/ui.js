@@ -57,7 +57,7 @@ const UI = (() => {
    * Play a soft, subtle haptic-like UI click sound.
    */
   function playClickSound() {
-    if (typeof TTS !== 'undefined' && !TTS.isEnabled()) return;
+    if (sfxVolume === 0) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
@@ -72,7 +72,7 @@ const UI = (() => {
       osc.frequency.setValueAtTime(1100, now);
       osc.frequency.exponentialRampToValueAtTime(550, now + 0.025);
 
-      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.setValueAtTime(0.05 * sfxVolume, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
 
       osc.start(now);
@@ -84,7 +84,7 @@ const UI = (() => {
    * Play a soft, pleasant bubble pop when marking a number.
    */
   function playStampSound() {
-    if (typeof TTS !== 'undefined' && !TTS.isEnabled()) return;
+    if (sfxVolume === 0) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
@@ -99,7 +99,7 @@ const UI = (() => {
       osc.frequency.setValueAtTime(520, now);
       osc.frequency.exponentialRampToValueAtTime(980, now + 0.04);
 
-      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.setValueAtTime(0.08 * sfxVolume, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
 
       osc.start(now);
@@ -111,7 +111,7 @@ const UI = (() => {
    * Play a gentle soft thump on invalid tap.
    */
   function playErrorSound() {
-    if (typeof TTS !== 'undefined' && !TTS.isEnabled()) return;
+    if (sfxVolume === 0) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
@@ -126,7 +126,7 @@ const UI = (() => {
       osc.frequency.setValueAtTime(180, now);
       osc.frequency.exponentialRampToValueAtTime(120, now + 0.04);
 
-      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.setValueAtTime(0.04 * sfxVolume, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
 
       osc.start(now);
@@ -138,7 +138,7 @@ const UI = (() => {
    * Play a pleasant victory chime using Web Audio API.
    */
   function playWinSound() {
-    if (typeof TTS !== 'undefined' && !TTS.isEnabled()) return;
+    if (sfxVolume === 0) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
@@ -155,7 +155,7 @@ const UI = (() => {
         osc.frequency.value = freq;
 
         const start = ctx.currentTime + i * noteDuration;
-        gain.gain.setValueAtTime(0.08, start);
+        gain.gain.setValueAtTime(0.08 * sfxVolume, start);
         gain.gain.exponentialRampToValueAtTime(0.001, start + noteDuration * 1.5);
 
         osc.start(start);
@@ -168,7 +168,7 @@ const UI = (() => {
    * Play countdown beep from 8 down to 0 before starting.
    */
   function playCountdownTick(seconds) {
-    if (typeof TTS !== 'undefined' && !TTS.isEnabled()) return;
+    if (sfxVolume === 0) return;
     try {
       const ctx = getAudioContext();
       if (!ctx) return;
@@ -185,7 +185,7 @@ const UI = (() => {
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(freq, now);
 
-          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.setValueAtTime(0.09 * sfxVolume, now);
           gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
 
           osc.start(now);
@@ -208,7 +208,7 @@ const UI = (() => {
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(freq * 0.9, now + 0.06);
 
-        gain.gain.setValueAtTime(vol, now);
+        gain.gain.setValueAtTime(vol * sfxVolume, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
 
         osc.start(now);
@@ -611,6 +611,61 @@ const UI = (() => {
     }
   }
 
+  // ── SFX Volume Control ──────────────────────────────────────────
+  let sfxVolume = 0.6; // 0 to 1
+
+  function setSfxVolume(v) {
+    sfxVolume = Math.max(0, Math.min(1, v));
+  }
+
+  function getSfxVolume() { return sfxVolume; }
+
+  // ── Background Music (audio file loop) ──────────────────────────
+  let musicVolume = 0;
+  let musicAudio = null;
+
+  function setMusicVolume(v) {
+    musicVolume = Math.max(0, Math.min(1, v));
+    if (musicAudio) {
+      musicAudio.volume = musicVolume * 0.4; // cap max so it stays subtle
+    }
+    if (musicVolume > 0 && !musicAudio) {
+      startMusic();
+    } else if (musicVolume === 0 && musicAudio) {
+      stopMusic();
+    }
+  }
+
+  function getMusicVolume() { return musicVolume; }
+
+  function startMusic() {
+    if (musicAudio) return;
+    try {
+      musicAudio = new Audio('/audio/bg-music.mp3');
+      musicAudio.loop = true;
+      musicAudio.volume = musicVolume * 0.4;
+      musicAudio.play().catch(() => {
+        // Autoplay blocked — will start on next user interaction
+        const startOnGesture = () => {
+          if (musicAudio && musicVolume > 0) {
+            musicAudio.play().catch(() => {});
+          }
+          document.removeEventListener('click', startOnGesture);
+        };
+        document.addEventListener('click', startOnGesture, { once: true });
+      });
+    } catch (e) {}
+  }
+
+  function stopMusic() {
+    if (!musicAudio) return;
+    try {
+      musicAudio.pause();
+      musicAudio.currentTime = 0;
+      musicAudio = null;
+    } catch (e) {}
+  }
+
   return {
     playClickSound,
     playStampSound,
@@ -631,5 +686,11 @@ const UI = (() => {
     resetYessClaims,
     escapeHtml,
     copyToClipboard,
+    setSfxVolume,
+    getSfxVolume,
+    setMusicVolume,
+    getMusicVolume,
+    startMusic,
+    stopMusic,
   };
 })();

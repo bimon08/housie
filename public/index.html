@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Play Housie (Tambola) with friends online! Free multiplayer game with text-to-speech number calling.">
   <meta name="theme-color" content="#1a5c3a">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -170,13 +170,38 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SETTINGS MODAL — Change name                               -->
+  <!-- SETTINGS MODAL — Name + Volume Controls                    -->
   <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="settings-modal" id="settings-modal">
     <div class="settings-card">
       <h3>⚙️ Settings</h3>
+
+      <!-- Name -->
       <label class="settings-label" for="settings-name">Your Name</label>
       <input class="settings-input" type="text" id="settings-name" placeholder="Enter your name..." maxlength="20" autocomplete="off">
+
+      <!-- Volume Controls -->
+      <div class="settings-volumes">
+        <div class="volume-row">
+          <span class="volume-icon">📢</span>
+          <label class="volume-label">Announcements</label>
+          <input type="range" class="volume-slider" id="vol-announce" min="0" max="100" value="80">
+          <span class="volume-value" id="vol-announce-val">80%</span>
+        </div>
+        <div class="volume-row">
+          <span class="volume-icon">🔊</span>
+          <label class="volume-label">Sound Effects</label>
+          <input type="range" class="volume-slider" id="vol-sfx" min="0" max="100" value="60">
+          <span class="volume-value" id="vol-sfx-val">60%</span>
+        </div>
+        <div class="volume-row">
+          <span class="volume-icon">🎵</span>
+          <label class="volume-label">Music</label>
+          <input type="range" class="volume-slider" id="vol-music" min="0" max="100" value="0">
+          <span class="volume-value" id="vol-music-val">Off</span>
+        </div>
+      </div>
+
       <div class="settings-actions">
         <button class="btn btn-save-settings" id="btn-save-settings"><span>Save</span></button>
         <button class="btn btn-cancel-settings" id="btn-cancel-settings"><span>Cancel</span></button>

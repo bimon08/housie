@@ -113,6 +113,12 @@ html {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  /* Prevent OS-level font scaling from breaking layout */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Prevent double-tap zoom */
+  touch-action: manipulation;
 }
 
 input, textarea {
@@ -517,6 +523,79 @@ body {
   color: var(--text-medium);
   padding: 10px 16px;
   font-size: 0.82rem;
+}
+
+/* ── Volume Controls ──────────────────────────────────────────── */
+.settings-volumes {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume-icon {
+  font-size: 0.9rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.volume-label {
+  font-weight: 700;
+  font-size: 0.65rem;
+  color: var(--text-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 85px;
+  flex-shrink: 0;
+}
+
+.volume-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.1);
+  outline: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-orange), var(--accent-orange-dark));
+  box-shadow: 0 2px 6px rgba(255, 107, 53, 0.4);
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-orange), var(--accent-orange-dark));
+  box-shadow: 0 2px 6px rgba(255, 107, 53, 0.4);
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.volume-value {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.65rem;
+  color: var(--text-medium);
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════

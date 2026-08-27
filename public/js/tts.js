@@ -10,6 +10,7 @@
 const TTS = (() => {
   let enabled = true;
   let currentAudio = null;
+  let volume = 0.8; // 0 to 1
 
   // Preload cache
   const audioCache = new Map();
@@ -37,7 +38,7 @@ const TTS = (() => {
    * Announce a number using pre-generated audio.
    */
   function announceNumber(n) {
-    if (!enabled) return;
+    if (!enabled || volume === 0) return;
     if (n < 1 || n > 90) return;
 
     // Stop any currently playing audio
@@ -51,11 +52,13 @@ const TTS = (() => {
     let audio = audioCache.get(n);
     if (audio) {
       audio.currentTime = 0;
+      audio.volume = volume;
       currentAudio = audio;
       audio.play().catch(() => fallbackSpeak(n));
     } else {
       // Load and play
       audio = new Audio(`/audio/${n}.m4a`);
+      audio.volume = volume;
       audioCache.set(n, audio);
       currentAudio = audio;
       audio.play().catch(() => fallbackSpeak(n));
@@ -119,6 +122,8 @@ const TTS = (() => {
     announceNumber,
     buildAnnouncement,
     preloadRange,
+    setVolume(v) { volume = Math.max(0, Math.min(1, v)); },
+    getVolume() { return volume; },
     toggle() {
       enabled = !enabled;
       if (!enabled && currentAudio) {

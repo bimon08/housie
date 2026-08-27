@@ -42,6 +42,23 @@
     }
   });
 
+  // ── DPI / System Scaling Normalization ──────────────────────────
+  // On Android, users can increase "Display Size" in settings, which
+  // inflates devicePixelRatio and shrinks the CSS viewport. We detect
+  // non-standard scaling and compensate by adjusting the root font-size.
+  (function normalizeDPI() {
+    const dpr = window.devicePixelRatio || 1;
+    // Standard DPRs: 1, 1.5, 2, 3. Non-standard (e.g. 2.625, 3.5) = system scaled
+    if (dpr > 1) {
+      const roundedDpr = Math.round(dpr);
+      const scaleFactor = roundedDpr / dpr;
+      // Only compensate if the difference is significant (>5%)
+      if (Math.abs(1 - scaleFactor) > 0.05) {
+        document.documentElement.style.fontSize = (scaleFactor * 100) + '%';
+      }
+    }
+  })();
+
   // ── PWA Install ─────────────────────────────────────────────────
   let deferredInstallPrompt = null;
 
@@ -395,6 +412,61 @@
     const btnCancel = document.getElementById('btn-cancel-settings');
     const btnSettings = document.getElementById('btn-settings');
 
+    // Volume sliders
+    const volAnnounce = document.getElementById('vol-announce');
+    const volSfx = document.getElementById('vol-sfx');
+    const volMusic = document.getElementById('vol-music');
+    const volAnnounceVal = document.getElementById('vol-announce-val');
+    const volSfxVal = document.getElementById('vol-sfx-val');
+    const volMusicVal = document.getElementById('vol-music-val');
+
+    // Load saved volume settings
+    const savedVols = JSON.parse(localStorage.getItem('housie-volumes') || '{}');
+    const announceVol = savedVols.announce !== undefined ? savedVols.announce : 80;
+    const sfxVol = savedVols.sfx !== undefined ? savedVols.sfx : 60;
+    const musicVol = savedVols.music !== undefined ? savedVols.music : 0;
+
+    // Apply saved volumes
+    volAnnounce.value = announceVol;
+    volSfx.value = sfxVol;
+    volMusic.value = musicVol;
+    applyVolumes(announceVol, sfxVol, musicVol);
+    updateVolLabels();
+
+    function updateVolLabels() {
+      volAnnounceVal.textContent = volAnnounce.value == 0 ? 'Off' : volAnnounce.value + '%';
+      volSfxVal.textContent = volSfx.value == 0 ? 'Off' : volSfx.value + '%';
+      volMusicVal.textContent = volMusic.value == 0 ? 'Off' : volMusic.value + '%';
+    }
+
+    function applyVolumes(a, s, m) {
+      if (typeof TTS !== 'undefined') TTS.setVolume(a / 100);
+      UI.setSfxVolume(s / 100);
+      UI.setMusicVolume(m / 100);
+    }
+
+    function saveVolumes() {
+      localStorage.setItem('housie-volumes', JSON.stringify({
+        announce: parseInt(volAnnounce.value),
+        sfx: parseInt(volSfx.value),
+        music: parseInt(volMusic.value),
+      }));
+    }
+
+    // Real-time slider updates
+    volAnnounce.addEventListener('input', () => {
+      updateVolLabels();
+      if (typeof TTS !== 'undefined') TTS.setVolume(parseInt(volAnnounce.value) / 100);
+    });
+    volSfx.addEventListener('input', () => {
+      updateVolLabels();
+      UI.setSfxVolume(parseInt(volSfx.value) / 100);
+    });
+    volMusic.addEventListener('input', () => {
+      updateVolLabels();
+      UI.setMusicVolume(parseInt(volMusic.value) / 100);
+    });
+
     btnSettings.addEventListener('click', () => {
       nameInput.value = playerName;
       modal.classList.add('active');
@@ -410,17 +482,31 @@
       playerName = name;
       localStorage.setItem('housie-name', playerName);
       document.getElementById('greeting-name').textContent = playerName;
+
+      // Save volumes
+      applyVolumes(parseInt(volAnnounce.value), parseInt(volSfx.value), parseInt(volMusic.value));
+      saveVolumes();
+
       modal.classList.remove('active');
-      UI.showToast('Name updated!', 'success', 2000);
+      UI.showToast('Settings saved!', 'success', 2000);
     });
 
     btnCancel.addEventListener('click', () => {
+      // Revert sliders to saved values
+      const saved = JSON.parse(localStorage.getItem('housie-volumes') || '{}');
+      volAnnounce.value = saved.announce !== undefined ? saved.announce : 80;
+      volSfx.value = saved.sfx !== undefined ? saved.sfx : 60;
+      volMusic.value = saved.music !== undefined ? saved.music : 0;
+      applyVolumes(parseInt(volAnnounce.value), parseInt(volSfx.value), parseInt(volMusic.value));
+      updateVolLabels();
       modal.classList.remove('active');
     });
 
     // Close on backdrop click
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.classList.remove('active');
+      if (e.target === modal) {
+        btnCancel.click(); // revert on backdrop close
+      }
     });
   }
 

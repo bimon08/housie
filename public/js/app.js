@@ -353,6 +353,10 @@
           playerId = response.playerId;
           isHost = true;
           hostName = response.hostName || playerName;
+          if (typeof Analytics !== 'undefined') {
+            Analytics.identify(playerId, { name: playerName });
+            Analytics.track('room_created', { ticketCount, roomCode });
+          }
           enterLobby(response);
         } else {
           UI.showToast(response.message || 'Failed to create room', 'error');
@@ -379,6 +383,10 @@
           roomCode = code;
           playerId = response.playerId;
           isHost = false;
+          if (typeof Analytics !== 'undefined') {
+            Analytics.identify(playerId, { name: playerName });
+            Analytics.track('room_joined', { roomCode: code });
+          }
           ticketCount = response.ticketCount;
           hostName = response.hostName || 'Host';
           enterLobby(response);
@@ -603,6 +611,9 @@
   // ── Game Screen ───────────────────────────────────────────────
   function enterGame(data) {
     showScreen('game');
+    if (typeof Analytics !== 'undefined') {
+      Analytics.track('game_started', { roomCode, isHost });
+    }
 
     // Request fullscreen immediately to hide OS system status bar
     requestAppFullscreen();
@@ -839,6 +850,9 @@
   function showResults(winners) {
     showScreen('results');
     UI.launchConfetti(80);
+    if (typeof Analytics !== 'undefined') {
+      Analytics.track('game_completed', { roomCode });
+    }
 
     const list = document.getElementById('winners-list');
     list.innerHTML = '';

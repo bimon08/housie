@@ -22,6 +22,14 @@ const io = new Server(server, {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Config endpoint for client analytics
+app.get('/api/config', (req, res) => {
+  res.json({
+    posthogKey: process.env.POSTHOG_KEY || process.env.PUBLIC_POSTHOG_KEY || '',
+    posthogHost: process.env.POSTHOG_HOST || process.env.PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
+  });
+});
+
 // Store active rooms
 const rooms = new Map(); // roomCode -> Room instance
 

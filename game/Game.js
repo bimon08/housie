@@ -93,6 +93,7 @@ class Game {
   drawNumber() {
     if (this.numberPool.length === 0) return null;
     if (this.finished) return null;
+    if (this.fullHouseClaimed) return null;
 
     const index = Math.floor(Math.random() * this.numberPool.length);
     const number = this.numberPool.splice(index, 1)[0];

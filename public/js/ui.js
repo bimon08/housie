@@ -410,13 +410,16 @@ const UI = (() => {
       }
 
       const el = document.createElement('div');
-      el.className = `ribbon-player ${isMe ? 'is-me' : ''} ${isYessClaimed ? 'is-yess-winner' : ''} ${hasOneLeft ? 'has-one-left' : ''}`;
+      const isOffline = !!player.disconnected;
+      el.className = `ribbon-player ${isMe ? 'is-me' : ''} ${isYessClaimed ? 'is-yess-winner' : ''} ${hasOneLeft ? 'has-one-left' : ''} ${isOffline ? 'is-offline' : ''}`;
       el.dataset.playerIndex = idx;
-      el.title = `#${serialNum} ${player.name}${isMe ? ' (You)' : ''}`;
+      el.dataset.playerId = player.id || '';
+      el.title = `#${serialNum} ${player.name}${isMe ? ' (You)' : ''}${isOffline ? ' (Offline)' : ''}`;
 
       el.innerHTML = `
         <div class="ribbon-avatar-wrap">
           <div class="ribbon-avatar" style="background:${color};">${initial}</div>
+          ${isOffline ? '<span class="ribbon-offline-dot"></span>' : ''}
         </div>
         <div class="ribbon-player-details">
           <div class="ribbon-name-row">

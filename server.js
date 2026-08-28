@@ -15,12 +15,26 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
-  pingInterval: 5000,   // check connection every 5s
-  pingTimeout: 3000,    // wait 3s for pong → dead in ~8s total
+  pingInterval: 25000,  // ping every 25s (default, mobile-friendly)
+  pingTimeout: 15000,   // wait 15s for pong (tolerates bad networks, tab switches)
+});
+
+// ── Crash Protection ────────────────────────────────────────────
+// Prevent the server from crashing on unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled rejection:', reason);
 });
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Health check endpoint (keeps Render free tier alive)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', rooms: rooms.size, uptime: process.uptime() });
+});
 
 // Config endpoint for client analytics
 app.get('/api/config', (req, res) => {
@@ -182,7 +196,19 @@ io.on('connection', (socket) => {
       if (oldSocket) {
         oldSocket.leave(roomCode);
       }
+      // Clear any grace timer from the old socket
+      if (room._graceTimers && room._graceTimers.has(oldSocketId)) {
+        clearTimeout(room._graceTimers.get(oldSocketId));
+        room._graceTimers.delete(oldSocketId);
+      }
       console.log(`Replaced stale socket ${oldSocketId} for device ${deviceId} in room ${roomCode}`);
+    }
+
+    // Mark as online (in case they were disconnected)
+    const player = room.players.get(socket.id);
+    if (player) {
+      player.disconnected = false;
+      delete player.disconnectedAt;
     }
 
     playerRooms.set(socket.id, roomCode);
@@ -258,6 +284,36 @@ io.on('connection', (socket) => {
       io.to(roomCode).emit('settings-updated', {
         ticketCount: room.ticketCount,
       });
+    }
+  });
+
+  // ── Check Game Status (lobby auto-join) ──
+  // If a player is stuck on lobby but the game already started, this lets them catch up
+  socket.on('check-game-status', ({ roomCode }, callback) => {
+    const room = rooms.get(roomCode);
+    if (!room) {
+      callback({ gameInProgress: false });
+      return;
+    }
+
+    if (room.gameInProgress && room.game) {
+      const player = room.players.get(socket.id);
+      const tickets = room.game.playerTickets && room.game.playerTickets[socket.id];
+      if (player && tickets) {
+        console.log(`[Lobby] ${player.name} catching up — game already in progress in room ${roomCode}`);
+        callback({
+          gameInProgress: true,
+          tickets: tickets,
+          isHost: room.isHost(socket.id),
+          players: room.getPlayerList(),
+          drawnNumbers: room.game.drawnNumbers,
+          prizes: room.game.prizes,
+        });
+      } else {
+        callback({ gameInProgress: false });
+      }
+    } else {
+      callback({ gameInProgress: false });
     }
   });
 
@@ -455,43 +511,39 @@ io.on('connection', (socket) => {
     const roomCode = playerRooms.get(socket.id);
     if (roomCode) {
       const room = rooms.get(roomCode);
+      if (!room) { playerRooms.delete(socket.id); return; }
 
-      // If game is in progress, give them a grace period to reconnect
-      if (room && room.gameInProgress) {
-        const player = room.players.get(socket.id);
-        if (player) {
-          player.disconnected = true;
-          player.disconnectedAt = Date.now();
-          console.log(`Player ${player.name} disconnected from room ${roomCode} — 2min grace period`);
+      const player = room.players.get(socket.id);
+      if (!player) { handlePlayerLeave(socket, roomCode); return; }
 
-          // Notify others that player went offline
-          socket.to(roomCode).emit('player-status', {
-            playerId: socket.id,
-            playerName: player.name,
-            online: false,
-            players: room.getPlayerList(),
-          });
+      player.disconnected = true;
+      player.disconnectedAt = Date.now();
 
-          // Grace period: remove after 2 minutes if they don't reconnect
-          const graceTimer = setTimeout(() => {
-            // Check if still disconnected (they might have rejoined)
-            const currentPlayer = room.players.get(socket.id);
-            if (currentPlayer && currentPlayer.disconnected) {
-              handlePlayerLeave(socket, roomCode);
-              console.log(`Grace period expired for ${player.name} in room ${roomCode}`);
-            }
-          }, 2 * 60 * 1000); // 2 minutes
+      // Grace period: 2 minutes during game, 30 seconds in lobby
+      const graceDuration = room.gameInProgress ? 2 * 60 * 1000 : 30 * 1000;
+      const label = room.gameInProgress ? '2min' : '30s';
+      console.log(`Player ${player.name} disconnected from room ${roomCode} — ${label} grace period`);
 
-          // Store timer so we can clear it on rejoin
-          if (!room._graceTimers) room._graceTimers = new Map();
-          room._graceTimers.set(socket.id, graceTimer);
-        } else {
+      // Notify others that player went offline
+      socket.to(roomCode).emit('player-status', {
+        playerId: socket.id,
+        playerName: player.name,
+        online: false,
+        players: room.getPlayerList(),
+      });
+
+      // Grace period timer — remove if they don't reconnect
+      const graceTimer = setTimeout(() => {
+        const currentPlayer = room.players.get(socket.id);
+        if (currentPlayer && currentPlayer.disconnected) {
           handlePlayerLeave(socket, roomCode);
+          console.log(`Grace period expired for ${player.name} in room ${roomCode}`);
         }
-      } else {
-        // No active game — remove immediately
-        handlePlayerLeave(socket, roomCode);
-      }
+      }, graceDuration);
+
+      // Store timer so we can clear it on rejoin
+      if (!room._graceTimers) room._graceTimers = new Map();
+      room._graceTimers.set(socket.id, graceTimer);
     }
     console.log(`Player disconnected: ${socket.id}`);
   });

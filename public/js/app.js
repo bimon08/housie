@@ -560,6 +560,8 @@
   }
 
   // ── Lobby Screen ──────────────────────────────────────────────
+  let _lobbyPollTimer = null;
+
   function enterLobby(data) {
     showScreen('lobby');
 
@@ -576,6 +578,31 @@
     } else {
       startBtn.style.display = 'none';
     }
+
+    // Poll: auto-join game if it already started (catches missed game-started events)
+    stopLobbyPoll();
+    _lobbyPollTimer = setInterval(() => {
+      if (currentScreen !== 'lobby' || !roomCode || !socket.connected) {
+        stopLobbyPoll();
+        return;
+      }
+      socket.emit('check-game-status', { roomCode }, (response) => {
+        if (response && response.gameInProgress && currentScreen === 'lobby') {
+          console.log('[Lobby] Game already in progress — auto-joining');
+          stopLobbyPoll();
+          isHost = response.isHost;
+          enterGame(response);
+          UI.showToast('Game in progress — jumping in! 🎉', 'success');
+        }
+      });
+    }, 3000);
+  }
+
+  function stopLobbyPoll() {
+    if (_lobbyPollTimer) {
+      clearInterval(_lobbyPollTimer);
+      _lobbyPollTimer = null;
+    }
   }
 
   function setupLobbyScreen() {
@@ -586,6 +613,7 @@
 
     // Leave lobby
     document.getElementById('btn-leave-lobby').addEventListener('click', () => {
+      stopLobbyPoll();
       if (roomCode) {
         socket.emit('leave-room', { roomCode });
       }
@@ -627,6 +655,9 @@
       playerName,
       hostName,
     }));
+
+    // Clear stale Yess claims from previous game
+    UI.resetYessClaims();
 
     GameRenderer.init(data.tickets, isHost);
     UI.renderPlayersRibbon(data.players, playerId);
@@ -1053,13 +1084,8 @@
       }
     });
 
-    // Handle player online/offline status from server
+    // Handle player online/offline status from server — silent ribbon update, no toast
     socket.on('player-status', (data) => {
-      if (!data.online) {
-        UI.showToast(`${data.playerName} went offline`, 'warning', 2500);
-      } else {
-        UI.showToast(`${data.playerName} is back! 🟢`, 'success', 2500);
-      }
       UI.renderPlayersRibbon(data.players, playerId);
     });
 

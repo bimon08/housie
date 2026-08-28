@@ -269,6 +269,7 @@ class Room {
       id: p.id,
       name: p.name,
       isHost: p.id === this.hostId,
+      disconnected: !!p.disconnected,
     }));
   }
 

@@ -215,6 +215,7 @@ class Game {
     this.playerTickets = {};
     this.started = false;
     this.finished = false;
+    this.fullHouseClaimed = false;
   }
 }
 

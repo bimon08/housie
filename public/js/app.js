@@ -565,8 +565,8 @@
   function enterLobby(data) {
     showScreen('lobby');
 
-    document.getElementById('room-code-value').textContent = roomCode;
-    document.getElementById('game-room-badge').textContent = `${hostName}'s Room`;
+    document.getElementById('room-code-value').textContent = roomCode || '1234';
+    document.getElementById('game-room-badge').textContent = `${hostName || 'Host'}'s Room`;
     UI.renderPlayerList(data.players);
 
     // Host controls
@@ -578,6 +578,8 @@
     } else {
       startBtn.style.display = 'none';
     }
+
+
 
     // Poll: auto-join game if it already started (catches missed game-started events)
     stopLobbyPoll();
@@ -595,7 +597,7 @@
           UI.showToast('Game in progress — jumping in! 🎉', 'success');
         }
       });
-    }, 3000);
+    }, 1500);
   }
 
   function stopLobbyPoll() {
@@ -706,7 +708,136 @@
         }
       });
     }
+    // Initialize mascot (deferred to avoid const TDZ)
+    setTimeout(() => Mascot.init(), 0);
   }
+
+  // ── Mascot System ──────────────────────────────────────────────
+  const Mascot = (() => {
+    const bubble = () => document.getElementById('mascot-bubble');
+    const wrap = () => document.getElementById('mascot-wrap');
+    let lastMessage = '';
+    let clickIndex = 0;
+
+    // ── Message pools (NO "lucky" or similar) ──
+    const msgs = {
+      start: [
+        "Let's goooo! 🔥", "Game time! 💪", "Show 'em what you got!", "Here we go! 🎉",
+        "Focus mode: ON 🧠", "You ready? I'm ready! 🎯", "This is gonna be epic!",
+      ],
+      slow: [
+        "Slow start huh? 🐢", "Patience is a virtue 🧘", "Don't sweat it!",
+        "The board is warming up...", "Relax, it's just getting started 😌",
+        "Numbers will come, trust me 😎", "Easy now, easy... 🫖",
+        "The good numbers are coming!", "Think of it as... suspense 🎬",
+      ],
+      mid: [
+        "Now we're cooking! 🍳", "Getting there! 💫", "Nice pace you've got! 🚀",
+        "Keep going, keep going!", "You're on a roll! 🎲", "Ooh things are heating up 🌡️",
+        "Halfway hero vibes 🦸", "Not bad, not bad at all 👏",
+      ],
+      good: [
+        "Woah you're flying! ✈️", "This is YOUR game! 💪", "Can't stop won't stop!",
+        "The board fears you 😈", "You're built different 🔥", "Crushing it! 🏆",
+        "Someone's on fire! 🧯", "Look at you go! 🏃‍♂️",
+      ],
+      almostThere: [
+        "SO CLOSE! Don't breathe! 😱", "ALMOST THERE!! 🤯", "I can taste it! 👅",
+        "Two more... just two! ✌️", "The finish line is RIGHT THERE!",
+        "My tentacles are tingling! 🐙", "HOLD ON HOLD ON!! 😤",
+      ],
+      oneLeft: [
+        "ONE MORE! ONE MORE! 😱🔥", "I CAN'T LOOK! 🙈", "DON'T. BLINK. 👁️",
+        "THIS IS IT!! 🚨", "My heart can't take this! 💓",
+        "The moment of truth! ⚡", "COME ONNNN! 🤞",
+      ],
+      fullHouse: [
+        "YESSSSS!! 🎉🎉🎉", "YOU DID IT!! 👑", "ABSOLUTE LEGEND! 🏆",
+        "THE CROWD GOES WILD! 🎪", "Take a bow! 🎭",
+      ],
+      someoneClaimed: [
+        "That could've been you 😅", "Oof, next time! 💪", "It's okay, Full House is bigger!",
+        "Stay focused, eyes on the prize 👀", "Don't worry, your time is coming!",
+        "Shake it off! 🐕", "One less thing to worry about!",
+      ],
+      manyDrawn: [
+        "This game is getting spicy! 🌶️", "We're deep in it now 🏊", "End game approaching...",
+        "The pool is thinning! 🎱", "Every number counts now!",
+        "It's getting real! 😤", "Final stretch energy 🏁",
+      ],
+      click: [
+        "I believe in you! 💪", "Stay sharp! 🔪", "You got this! 🫵",
+        "Keep those eyes peeled! 👀", "Big things coming! 🚀",
+        "I'm rooting for you! 📣", "Vibes are immaculate ✨",
+        "Manifesting your win 🧘", "Plot armor activated 🛡️",
+        "Main character energy! 🎬", "Trust the process 🔄",
+        "Built different! 🧱", "No cap, you're killing it 🧢",
+        "Big brain plays only 🧠", "Elite gamer moment 🎮",
+        "Your time is NOW! ⏰", "Legend in the making! 📖",
+        "Absolute cinema! 🎥", "Sending positive vibes ~~~",
+        "I see greatness ahead! 🔮", "Goosebumps! 🪿",
+      ],
+    };
+
+    function pick(arr) {
+      let msg;
+      do { msg = arr[Math.floor(Math.random() * arr.length)]; } while (msg === lastMessage && arr.length > 1);
+      lastMessage = msg;
+      return msg;
+    }
+
+    function show(text) {
+      const b = bubble();
+      if (!b) return;
+      b.textContent = text;
+      // Re-trigger animation by removing and re-adding class
+      b.classList.remove('visible');
+      void b.offsetHeight; // force reflow
+      b.classList.add('visible');
+    }
+
+    /** Get a context-aware message based on game state */
+    function getContextMessage() {
+      const progress = GameRenderer.getProgress();
+      const drawn = GameRenderer.getDrawnCount();
+      const best = progress.best;
+
+      if (best === 15) return pick(msgs.fullHouse);
+      if (best === 14) return pick(msgs.oneLeft);
+      if (best >= 12) return pick(msgs.almostThere);
+      if (drawn >= 60) return pick(msgs.manyDrawn);
+      if (best >= 8) return pick(msgs.good);
+      if (best >= 4) return pick(msgs.mid);
+      if (drawn >= 5) return pick(msgs.slow);
+      return pick(msgs.start);
+    }
+
+    function init() {
+      const w = wrap();
+      if (!w) return;
+
+      // Click handler — cycle through random click messages
+      w.addEventListener('click', () => {
+        clickIndex++;
+        // Every 3rd click show a context-aware message, otherwise random
+        if (clickIndex % 3 === 0) {
+          show(getContextMessage());
+        } else {
+          show(pick(msgs.click));
+        }
+      });
+
+      // Show starting message
+      show(pick(msgs.start));
+    }
+
+    /** Called when someone else claims a prize */
+    function onOtherClaimed() {
+      show(pick(msgs.someoneClaimed));
+    }
+
+    return { init, show, getContextMessage, onOtherClaimed, pick, msgs };
+  })();
 
   // ── Game Start Countdown Overlay ─────────────────────────────────
   let gameCountdownTimer = null;
@@ -867,16 +998,22 @@
       }
     });
 
-    // Emit progress whenever a number is marked; server broadcasts sorted leaderboard
+    // Emit progress whenever a number is marked + update mascot
     GameRenderer.setOnMark((ticketIdx, markedCount) => {
-      if (!roomCode) return;
-      // Collect current marked counts for ALL tickets
-      const tickets = GameRenderer.getTickets();
-      const ticketCounts = tickets.map((_, i) => {
-        const grid = document.getElementById(`ticket-grid-${i}`);
-        return grid ? grid.querySelectorAll('.ticket-cell.marked').length : 0;
-      });
-      socket.emit('player-progress', { roomCode, ticketCounts });
+      // Progress to server
+      if (roomCode) {
+        const tickets = GameRenderer.getTickets();
+        const ticketCounts = tickets.map((_, i) => {
+          const grid = document.getElementById(`ticket-grid-${i}`);
+          return grid ? grid.querySelectorAll('.ticket-cell.marked').length : 0;
+        });
+        socket.emit('player-progress', { roomCode, ticketCounts });
+      }
+      // Mascot milestone reactions
+      if (markedCount === 14) Mascot.show(Mascot.pick(Mascot.msgs.oneLeft));
+      else if (markedCount === 13 || markedCount === 12) Mascot.show(Mascot.pick(Mascot.msgs.almostThere));
+      else if (markedCount === 8 || markedCount === 10) Mascot.show(Mascot.pick(Mascot.msgs.good));
+      else if (markedCount === 5) Mascot.show(Mascot.pick(Mascot.msgs.mid));
     });
   }
 
@@ -931,10 +1068,7 @@
       // Always re-render with the authoritative server list
       UI.renderPlayerList(data.players);
 
-      // Only show join toast if this isn't our own join event
-      if (data.playerName !== playerName) {
-        UI.showToast(`${data.playerName} joined!`, 'info', 2000);
-      }
+
 
       if (isHost) {
         document.getElementById('btn-start-game').disabled = data.playerCount < 2;
@@ -943,7 +1077,6 @@
 
     socket.on('player-left', (data) => {
       UI.renderPlayerList(data.players);
-      UI.showToast(`${data.playerName} left`, 'warning', 2000);
 
       if (data.newHostId === playerId) {
         isHost = true;
@@ -972,6 +1105,12 @@
     });
 
     socket.on('game-started', (data) => {
+      // Acknowledge receipt so server stops retrying
+      socket.emit('game-ack', { roomCode });
+
+      // Ignore if we're already on the game screen (duplicate from retry)
+      if (currentScreen === 'game') return;
+
       isHost = data.isHost;
       enterGame(data);
       UI.showToast('Game started! 🎉', 'success');
@@ -991,22 +1130,46 @@
       }
       UI.recordYessClaim(data.winnerName, data.playerId);
       UI.showPrizeAnnouncement(data.message, 3500);
+      Mascot.onOtherClaimed();
     });
 
-    // Full House grace period — countdown for others to claim
+    // Full House grace period — big blinking countdown overlay
     let graceInterval = null;
     socket.on('full-house-grace', (data) => {
       let remaining = data.seconds;
 
-      // Show initial toast
-      UI.showToast(`🏠 ${data.winnerName} got Full House! ${remaining}s for others to claim!`, 'warning', 4000);
+      // Create or reuse the countdown overlay
+      let overlay = document.getElementById('grace-countdown-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'grace-countdown-overlay';
+        overlay.className = 'grace-countdown-overlay';
+        const center = document.querySelector('.game-panel-center') || document.querySelector('.game-content');
+        if (center) center.appendChild(overlay);
+      }
 
-      // Update countdown
+      function updateOverlay() {
+        overlay.innerHTML = `
+          <div class="grace-countdown-inner">
+            <div class="grace-winner-text">🏠 ${data.winnerName} got Full House!</div>
+            <div class="grace-countdown-number">${remaining}</div>
+            <div class="grace-countdown-label">seconds to claim yours!</div>
+          </div>
+        `;
+        overlay.style.display = 'flex';
+      }
+
+      updateOverlay();
+
       graceInterval = setInterval(() => {
         remaining--;
-        const badge = document.getElementById('numbers-called-count');
-        if (badge) badge.textContent = `⏱️ ${remaining}s`;
-        if (remaining <= 0) clearInterval(graceInterval);
+        if (remaining <= 0) {
+          clearInterval(graceInterval);
+          graceInterval = null;
+          if (overlay) overlay.remove();
+          return;
+        }
+        updateOverlay();
       }, 1000);
     });
 
@@ -1196,8 +1359,39 @@
   // ── Dev Mock Mode ──────────────────────────────────────────────
   function loadMockGame() {
     if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return false;
-    const isMock = location.hash === '#game' || location.hash === '#mock' || location.search.includes('mock');
+    const isMock = location.hash === '#game' || location.hash === '#mock' || location.hash === '#lobby' || location.search.includes('mock');
     if (!isMock) return false;
+
+    // Mock lobby mode
+    if (location.hash === '#lobby') {
+      const mockNames = [
+        'Rahul', 'Priya', 'Amit', 'Sneha', 'Vikram', 'Neha', 'Arjun', 'Pooja',
+        'Karan', 'Divya', 'Rohit', 'Meera', 'Sanjay', 'Anjali', 'Deepak', 'Kavita',
+        'Manish', 'Ritu', 'Suresh', 'Nisha', 'Anil', 'Swati', 'Rajesh', 'Simran',
+        'Vivek', 'Tanvi', 'Gaurav', 'Isha', 'Nikhil', 'Megha'
+      ];
+      let mockPlayers = mockNames.map((name, i) => ({ id: `mock-${i}`, name, isHost: i === 0 }));
+      enterLobby({ players: mockPlayers });
+
+      // Simulate churn: every 2s, remove 1-2 and add 1-2
+      let counter = 0;
+      setInterval(() => {
+        if (currentScreen !== 'lobby') return;
+        const removeCount = Math.random() > 0.5 ? 2 : 1;
+        for (let i = 0; i < removeCount && mockPlayers.length > 5; i++) {
+          const idx = 1 + Math.floor(Math.random() * (mockPlayers.length - 1));
+          mockPlayers.splice(idx, 1);
+        }
+        const addCount = Math.random() > 0.4 ? 2 : 1;
+        const extra = ['Zara', 'Dev', 'Komal', 'Sahil', 'Riya', 'Aman', 'Tina', 'Jay'];
+        for (let i = 0; i < addCount && mockPlayers.length < 35; i++) {
+          counter++;
+          mockPlayers.push({ id: `new-${counter}`, name: extra[counter % extra.length] + counter, isHost: false });
+        }
+        UI.renderPlayerList(mockPlayers);
+      }, 2000);
+      return true;
+    }
 
     // 30 mock player names
     const mockNames = [

@@ -379,5 +379,14 @@ const GameRenderer = (() => {
     restoreMarkedNumbers,
     clearMarkedNumbers,
     setOnMark: (cb) => { onMarkCallback = cb; },
+    getDrawnCount: () => drawnNumbers.size,
+    /** Returns { best, counts[] } — best = highest marked count across all tickets */
+    getProgress: () => {
+      const counts = tickets.map((_, i) => {
+        const grid = document.querySelector(`#ticket-${i} .ticket-grid`);
+        return grid ? grid.querySelectorAll('.ticket-cell.marked').length : 0;
+      });
+      return { best: Math.max(0, ...counts), counts };
+    },
   };
 })();

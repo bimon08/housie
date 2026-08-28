@@ -143,6 +143,21 @@ function generateRoomCode() {
   return code;
 }
 
+// ─── Periodic Lobby Sync (every 5s) ──────────────────────────────
+// Broadcasts authoritative player list to all rooms in lobby state
+setInterval(() => {
+  for (const [roomCode, room] of rooms) {
+    if (!room.gameInProgress) {
+      const playerList = room.getPlayerList();
+      io.to(roomCode).emit('player-joined', {
+        playerName: null, // sync, not a real join
+        playerCount: room.players.size,
+        players: playerList,
+      });
+    }
+  }
+}, 5000);
+
 // ─── Socket.io Event Handling ────────────────────────────────────
 
 io.on('connection', (socket) => {
@@ -331,8 +346,14 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Track which players have acknowledged game-started
+    const ackedPlayers = new Set();
+    room._gameAcked = ackedPlayers;
+
     // Send each player their own tickets
-    for (const [playerId, player] of room.players) {
+    function sendGameStarted(playerId) {
+      const player = room.players.get(playerId);
+      if (!player) return;
       const tickets = result.playerTickets[playerId];
       io.to(playerId).emit('game-started', {
         tickets,
@@ -342,11 +363,40 @@ io.on('connection', (socket) => {
       });
     }
 
+    // Initial send to all
+    for (const [playerId] of room.players) {
+      sendGameStarted(playerId);
+    }
+
+    // Retry for unacknowledged players every 2 seconds, up to 5 times
+    let retryCount = 0;
+    const retryTimer = setInterval(() => {
+      retryCount++;
+      if (retryCount >= 5 || !room.gameInProgress) {
+        clearInterval(retryTimer);
+        return;
+      }
+      for (const [playerId] of room.players) {
+        if (!ackedPlayers.has(playerId)) {
+          console.log(`[Start] Retrying game-started for unacked player ${playerId} (attempt ${retryCount})`);
+          sendGameStarted(playerId);
+        }
+      }
+    }, 2000);
+
     callback({ success: true });
     console.log(`Game started in room ${roomCode}`);
 
-    // Start auto-draw timer (5 second interval, first draw after 5 seconds)
+    // Start auto-draw timer
     startAutoDraw(roomCode);
+  });
+
+  // ── Game Acknowledgment ──
+  socket.on('game-ack', ({ roomCode }) => {
+    const room = rooms.get(roomCode);
+    if (room && room._gameAcked) {
+      room._gameAcked.add(socket.id);
+    }
   });
 
   // ── Draw Number (kept for manual fallback but not used in normal flow) ──
@@ -428,7 +478,7 @@ io.on('connection', (socket) => {
           // Notify all players about the grace period
           io.to(roomCode).emit('full-house-grace', {
             winnerName: result.winnerName,
-            seconds: 10,
+            seconds: 5,
           });
 
           const timer = setTimeout(() => {
@@ -440,7 +490,7 @@ io.on('connection', (socket) => {
                 winners: r.game.getWinners(),
               });
             }
-          }, 10000);
+          }, 5000);
 
           fullHouseTimers.set(roomCode, timer);
         }
@@ -491,6 +541,18 @@ io.on('connection', (socket) => {
 
     if (room.resetGame(socket.id)) {
       stopAutoDraw(roomCode);
+
+      // Clear full house grace timer from previous game
+      if (fullHouseTimers.has(roomCode)) {
+        clearTimeout(fullHouseTimers.get(roomCode));
+        fullHouseTimers.delete(roomCode);
+      }
+
+      // Clear Yess claim flags on all players
+      for (const [, p] of room.players) {
+        p.hasClaimedYess = false;
+      }
+
       io.to(roomCode).emit('game-reset', {
         players: room.getPlayerList(),
         ticketCount: room.ticketCount,

@@ -246,17 +246,15 @@
         <div class="lobby-right">
           <!-- Players List -->
           <div class="players-section">
-            <h3 class="players-heading">
+          <h3 class="players-heading">
               <span>Players</span>
               <span class="player-count-badge" id="player-count-badge">1</span>
+              <span class="waiting-inline" id="waiting-indicator">
+                <span class="waiting-dots"><span></span><span></span><span></span></span>
+                waiting
+              </span>
             </h3>
             <div class="players-list" id="players-list"></div>
-          </div>
-
-          <!-- Waiting Indicator -->
-          <div class="waiting-indicator" id="waiting-indicator">
-            <div class="waiting-dots"><span></span><span></span><span></span></div>
-            <p>Waiting for players to join...</p>
           </div>
         </div>
       </div>
@@ -338,6 +336,12 @@
               <span class="stage-info-dot"></span>
               <span>AUTO CALLING</span>
             </div>
+          </div>
+
+          <!-- Fun Mascot -->
+          <div class="mascot-wrap" id="mascot-wrap">
+            <div class="mascot-bubble" id="mascot-bubble">Let's goooo! 🔥</div>
+            <div class="mascot-character" id="mascot-character">🐙</div>
           </div>
 
           <!-- Claim Actions -->

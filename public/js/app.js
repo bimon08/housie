@@ -818,8 +818,11 @@
 
         btn.disabled = true;
 
-        // Support mock mode clicking Yess
-        if (location.hash === '#game' || location.hash === '#mock' || !socket || !socket.connected) {
+        // Support mock/demo mode only (localhost) — NOT real games
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const isMockHash = location.hash === '#mock' || location.search.includes('mock') || (isLocalhost && location.hash === '#game');
+        const isMockMode = isMockHash && (!socket || !socket.connected);
+        if (isMockMode) {
           UI.recordYessClaim(playerName || 'Rahul', playerId || 'mock-0');
           UI.showToast('🎉 YESSS!! Claimed!', 'success');
           return;

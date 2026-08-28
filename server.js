@@ -37,7 +37,8 @@ const rooms = new Map(); // roomCode -> Room instance
 const playerRooms = new Map(); // socketId -> roomCode
 
 // Auto-draw timers per room
-const autoDrawTimers = new Map(); // roomCode -> intervalId
+// Each entry: { delay: timeoutId|null, interval: intervalId|null, stopped: boolean }
+const autoDrawTimers = new Map(); // roomCode -> timer state
 
 // Full House grace period timers
 const fullHouseTimers = new Map(); // roomCode -> timeoutId
@@ -50,8 +51,14 @@ const AUTO_DRAW_INTERVAL = 7000; // 7 seconds between draws
 function startAutoDraw(roomCode) {
   stopAutoDraw(roomCode); // Clear any existing timer
 
+  const timerState = { delay: null, interval: null, stopped: false };
+  autoDrawTimers.set(roomCode, timerState);
+
   // 8-second delay before first draw (matches the client overlay countdown)
-  const initialDelay = setTimeout(() => {
+  timerState.delay = setTimeout(() => {
+    // If stopAutoDraw was called during the delay, don't start the interval
+    if (timerState.stopped) return;
+
     const drawFn = () => {
       const room = rooms.get(roomCode);
       if (!room || !room.gameInProgress || room.game.finished) {
@@ -74,22 +81,28 @@ function startAutoDraw(roomCode) {
 
     // Draw first number immediately after countdown
     drawFn();
-    // Then draw every 5 seconds
-    const interval = setInterval(drawFn, AUTO_DRAW_INTERVAL);
-    autoDrawTimers.set(roomCode, interval);
+    // Then draw every 7 seconds
+    if (!timerState.stopped) {
+      timerState.interval = setInterval(drawFn, AUTO_DRAW_INTERVAL);
+    }
   }, 8000);
-
-  // Store the initial delay timer so it can be cancelled
-  autoDrawTimers.set(roomCode, initialDelay);
 }
 
 /**
  * Stop auto-drawing for a room.
  */
 function stopAutoDraw(roomCode) {
-  const timer = autoDrawTimers.get(roomCode);
-  if (timer) {
-    clearInterval(timer);
+  const timerState = autoDrawTimers.get(roomCode);
+  if (timerState) {
+    timerState.stopped = true;
+    if (timerState.delay) {
+      clearTimeout(timerState.delay);
+      timerState.delay = null;
+    }
+    if (timerState.interval) {
+      clearInterval(timerState.interval);
+      timerState.interval = null;
+    }
     autoDrawTimers.delete(roomCode);
   }
 }

@@ -62,6 +62,14 @@ function startAutoDraw(roomCode) {
     const drawFn = () => {
       const room = rooms.get(roomCode);
       if (!room || !room.gameInProgress || room.game.finished) {
+        console.log(`[AutoDraw] Stopping for ${roomCode}: room gone or game finished`);
+        stopAutoDraw(roomCode);
+        return;
+      }
+
+      // Safety net: stop drawing if Full House was already claimed
+      if (room.game.fullHouseClaimed) {
+        console.log(`[AutoDraw] Stopping for ${roomCode}: Full House already claimed`);
         stopAutoDraw(roomCode);
         return;
       }
@@ -94,6 +102,7 @@ function startAutoDraw(roomCode) {
 function stopAutoDraw(roomCode) {
   const timerState = autoDrawTimers.get(roomCode);
   if (timerState) {
+    console.log(`[AutoDraw] stopAutoDraw(${roomCode}): clearing delay=${!!timerState.delay} interval=${!!timerState.interval}`);
     timerState.stopped = true;
     if (timerState.delay) {
       clearTimeout(timerState.delay);
@@ -104,6 +113,8 @@ function stopAutoDraw(roomCode) {
       timerState.interval = null;
     }
     autoDrawTimers.delete(roomCode);
+  } else {
+    console.log(`[AutoDraw] stopAutoDraw(${roomCode}): no timer found (already stopped or never started)`);
   }
 }
 
@@ -320,6 +331,8 @@ io.on('connection', (socket) => {
       const player = room.players.get(socket.id);
       if (player) player.hasClaimedYess = true;
 
+      console.log(`[Claim] ${player?.name} claimed ${prizeType} (valid) in room ${roomCode}`);
+
       // Broadcast prize claim to all players
       io.to(roomCode).emit('prize-claimed', {
         prizeType: result.prizeType,
@@ -349,28 +362,32 @@ io.on('connection', (socket) => {
       });
       io.to(roomCode).emit('leaderboard-update', { leaderboard });
 
-      // Full House grace period — 30s for others to also claim
-      if (prizeType === 'fullHouse' && !fullHouseTimers.has(roomCode)) {
+      // Full House: ALWAYS stop auto-draw immediately
+      if (prizeType === 'fullHouse') {
+        console.log(`[Claim] Full House claimed — stopping auto-draw for room ${roomCode}`);
         stopAutoDraw(roomCode);
 
-        // Notify all players about the grace period
-        io.to(roomCode).emit('full-house-grace', {
-          winnerName: result.winnerName,
-          seconds: 10,
-        });
+        // Start grace period only once (first Full House claim)
+        if (!fullHouseTimers.has(roomCode)) {
+          // Notify all players about the grace period
+          io.to(roomCode).emit('full-house-grace', {
+            winnerName: result.winnerName,
+            seconds: 10,
+          });
 
-        const timer = setTimeout(() => {
-          fullHouseTimers.delete(roomCode);
-          const r = rooms.get(roomCode);
-          if (r && r.game) {
-            r.game.finishGame();
-            io.to(roomCode).emit('game-over', {
-              winners: r.game.getWinners(),
-            });
-          }
-        }, 10000);
+          const timer = setTimeout(() => {
+            fullHouseTimers.delete(roomCode);
+            const r = rooms.get(roomCode);
+            if (r && r.game) {
+              r.game.finishGame();
+              io.to(roomCode).emit('game-over', {
+                winners: r.game.getWinners(),
+              });
+            }
+          }, 10000);
 
-        fullHouseTimers.set(roomCode, timer);
+          fullHouseTimers.set(roomCode, timer);
+        }
       }
     }
   });

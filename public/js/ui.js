@@ -41,6 +41,7 @@ const UI = (() => {
   }
 
   let audioCtx = null;
+  let audioUnlocked = false;
 
   function getAudioContext() {
     if (!audioCtx) {
@@ -52,6 +53,49 @@ const UI = (() => {
     }
     return audioCtx;
   }
+
+  /**
+   * Unlock audio on first user gesture.
+   * Brave (and others) block AudioContext + HTML5 Audio until a real user
+   * interaction fires. We prime both pathways with a silent play.
+   */
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+
+    // 1. Create & resume AudioContext + play a silent buffer through it
+    try {
+      const ctx = getAudioContext();
+      if (ctx) {
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        // Play a tiny silent buffer to fully unlock
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+      }
+    } catch (e) {}
+
+    // 2. Play a silent HTML5 Audio to unlock that pathway too
+    try {
+      const silence = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+      silence.volume = 0;
+      silence.play().then(() => silence.pause()).catch(() => {});
+    } catch (e) {}
+
+    // Remove listeners after unlock
+    document.removeEventListener('click', unlockAudio, true);
+    document.removeEventListener('touchstart', unlockAudio, true);
+    document.removeEventListener('touchend', unlockAudio, true);
+    document.removeEventListener('keydown', unlockAudio, true);
+  }
+
+  // Register unlock listeners (capture phase so we get them before anything else)
+  document.addEventListener('click', unlockAudio, true);
+  document.addEventListener('touchstart', unlockAudio, true);
+  document.addEventListener('touchend', unlockAudio, true);
+  document.addEventListener('keydown', unlockAudio, true);
 
   /**
    * Play a soft, subtle haptic-like UI click sound.
@@ -652,30 +696,38 @@ const UI = (() => {
       musicAudio.loop = true;
       musicAudio.volume = musicVolume * 0.4;
 
-      const p = musicAudio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          // Autoplay blocked — wait for next real user touch/click
-          if (gestureHandler) {
-            document.removeEventListener('click', gestureHandler);
-            document.removeEventListener('touchstart', gestureHandler);
-          }
-          gestureHandler = () => {
+      function tryPlayMusic() {
+        if (!musicAudio || musicVolume === 0) { stopMusic(); return; }
+        const p = musicAudio.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            // Autoplay blocked — wait for next real user touch/click
             if (gestureHandler) {
               document.removeEventListener('click', gestureHandler);
               document.removeEventListener('touchstart', gestureHandler);
-              gestureHandler = null;
+              document.removeEventListener('touchend', gestureHandler);
             }
-            if (musicAudio && musicVolume > 0) {
-              musicAudio.play().catch(() => {});
-            } else {
-              stopMusic();
-            }
-          };
-          document.addEventListener('click', gestureHandler, { once: true });
-          document.addEventListener('touchstart', gestureHandler, { once: true });
-        });
+            gestureHandler = () => {
+              if (gestureHandler) {
+                document.removeEventListener('click', gestureHandler);
+                document.removeEventListener('touchstart', gestureHandler);
+                document.removeEventListener('touchend', gestureHandler);
+                gestureHandler = null;
+              }
+              if (musicAudio && musicVolume > 0) {
+                musicAudio.play().catch(() => {});
+              } else {
+                stopMusic();
+              }
+            };
+            document.addEventListener('click', gestureHandler);
+            document.addEventListener('touchstart', gestureHandler);
+            document.addEventListener('touchend', gestureHandler);
+          });
+        }
       }
+
+      tryPlayMusic();
     } catch (e) {}
   }
 

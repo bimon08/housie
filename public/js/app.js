@@ -1381,26 +1381,43 @@
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then((reg) => {
-        // Check for updates every 2 minutes
-        setInterval(() => { reg.update().catch(() => {}); }, 2 * 60 * 1000);
+        // Check for updates every 30 seconds (frequent so stale code is caught quickly)
+        setInterval(() => { reg.update().catch(() => {}); }, 30 * 1000);
 
-        // When a new SW is found, flag for silent reload at next screen transition
+        /**
+         * Handle a detected SW update:
+         * - If NOT on the game screen → reload immediately to get fresh code
+         * - If ON the game screen → flag for reload at next screen transition
+         */
+        function handleUpdate() {
+          if (currentScreen !== 'game') {
+            window.location.reload();
+          } else {
+            _pendingUpdate = true;
+          }
+        }
+
+        // When a new SW is found and activated
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'activated') {
-                _pendingUpdate = true;
+                handleUpdate();
               }
             });
           }
         });
       }).catch(() => {});
 
-      // Listen for SW_UPDATED message — flag for silent reload
+      // Listen for SW_UPDATED message
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SW_UPDATED') {
-          _pendingUpdate = true;
+          if (currentScreen !== 'game') {
+            window.location.reload();
+          } else {
+            _pendingUpdate = true;
+          }
         }
       });
     }

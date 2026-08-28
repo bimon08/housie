@@ -1,19 +1,30 @@
-/**
- * Text-to-Speech Number Announcer
- *
- * Uses pre-generated audio files for natural, consistent voice.
- * Falls back to Web Speech API if audio fails.
- *
- * Audio files: /audio/1.m4a through /audio/90.m4a
- */
-
 const TTS = (() => {
   let enabled = true;
   let currentAudio = null;
   let volume = 0.8; // 0 to 1
+  let audioUnlocked = false;
 
   // Preload cache
   const audioCache = new Map();
+
+  /**
+   * Unlock HTML5 Audio on first user gesture (required by Brave).
+   */
+  function unlockTTSAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try {
+      const silence = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+      silence.volume = 0;
+      silence.play().then(() => silence.pause()).catch(() => {});
+    } catch (e) {}
+    document.removeEventListener('click', unlockTTSAudio, true);
+    document.removeEventListener('touchstart', unlockTTSAudio, true);
+    document.removeEventListener('touchend', unlockTTSAudio, true);
+  }
+  document.addEventListener('click', unlockTTSAudio, true);
+  document.addEventListener('touchstart', unlockTTSAudio, true);
+  document.addEventListener('touchend', unlockTTSAudio, true);
 
   /**
    * Preload an audio file into cache.

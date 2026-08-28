@@ -1,4 +1,4 @@
-const CACHE_NAME = 'housie-v10';
+const CACHE_NAME = 'housie-v11';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

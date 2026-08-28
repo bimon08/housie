@@ -724,46 +724,61 @@
       start: [
         "Let's goooo! 🔥", "Game time! 💪", "Show 'em what you got!", "Here we go! 🎉",
         "Focus mode: ON 🧠", "You ready? I'm ready! 🎯", "This is gonna be epic!",
+        "Shu ia ka game! 🎲", "Iohi bha ha! 💪", "Wan eh! 🔥",
       ],
       slow: [
         "Slow start huh? 🐢", "Patience is a virtue 🧘", "Don't sweat it!",
         "The board is warming up...", "Relax, it's just getting started 😌",
         "Numbers will come, trust me 😎", "Easy now, easy... 🫖",
         "The good numbers are coming!", "Think of it as... suspense 🎬",
+        "Jai jai number hoi la jen ei lar 🐌", "Peit bha leh! 😌",
+        "Thoh kham noh leh 🫖", "Ka number wan ha ka jingialang! 🎯",
       ],
       mid: [
         "Now we're cooking! 🍳", "Getting there! 💫", "Nice pace you've got! 🚀",
         "Keep going, keep going!", "You're on a roll! 🎲", "Ooh things are heating up 🌡️",
         "Halfway hero vibes 🦸", "Not bad, not bad at all 👏",
+        "Lah kdew eh! 🍳", "Wan biang leh! 💫",
+        "Phin kham bha noh! 🚀",
       ],
       good: [
         "Woah you're flying! ✈️", "This is YOUR game! 💪", "Can't stop won't stop!",
         "The board fears you 😈", "You're built different 🔥", "Crushing it! 🏆",
         "Someone's on fire! 🧯", "Look at you go! 🏃‍♂️",
+        "Nga lah kynruh bha wain! 🔥", "Bha smat! 🏆",
+        "Pha la kit katni eh! 😈", "Shu kham biang leh! ✈️",
       ],
       almostThere: [
         "SO CLOSE! Don't breathe! 😱", "ALMOST THERE!! 🤯", "I can taste it! 👅",
         "Two more... just two! ✌️", "The finish line is RIGHT THERE!",
         "My tentacles are tingling! 🐙", "HOLD ON HOLD ON!! 😤",
+        "Kynmaw bha leh!! 😱", "Lah jen jen eh! 🤯",
+        "Dang ar tylli! ✌️", "THOH THOH!! 😤",
       ],
       oneLeft: [
         "ONE MORE! ONE MORE! 😱🔥", "I CAN'T LOOK! 🙈", "DON'T. BLINK. 👁️",
         "THIS IS IT!! 🚨", "My heart can't take this! 💓",
         "The moment of truth! ⚡", "COME ONNNN! 🤞",
+        "DANG WEI TYLLI!! 😱🔥", "NGA PHER SHONG!! 🙈",
+        "WAN DAI WAN DAI!! 🤞", "KA SNGI KANI LAH EH!! 🚨",
       ],
       fullHouse: [
         "YESSSSS!! 🎉🎉🎉", "YOU DID IT!! 👑", "ABSOLUTE LEGEND! 🏆",
         "THE CROWD GOES WILD! 🎪", "Take a bow! 🎭",
+        "KHUBLEI!! 🎉🎉🎉", "SMAT SIA!! 👑", "KYNMAW BHA!! 🏆",
       ],
       someoneClaimed: [
         "That could've been you 😅", "Oof, next time! 💪", "It's okay, Full House is bigger!",
         "Stay focused, eyes on the prize 👀", "Don't worry, your time is coming!",
         "Shake it off! 🐕", "One less thing to worry about!",
+        "Ka por wan ha phi! 💪", "Peit biang bha leh! 👀",
+        "Ym dei ban sniew! 😤",
       ],
       manyDrawn: [
         "This game is getting spicy! 🌶️", "We're deep in it now 🏊", "End game approaching...",
         "The pool is thinning! 🎱", "Every number counts now!",
         "It's getting real! 😤", "Final stretch energy 🏁",
+        "Lah shu kham kumno! 🌶️", "Ka jingpyniap lah wan! 🏁",
       ],
       click: [
         "I believe in you! 💪", "Stay sharp! 🔪", "You got this! 🫵",
@@ -776,6 +791,9 @@
         "Your time is NOW! ⏰", "Legend in the making! 📖",
         "Absolute cinema! 🎥", "Sending positive vibes ~~~",
         "I see greatness ahead! 🔮", "Goosebumps! 🪿",
+        "Nga ngeit ha phi! 💪", "Phi lah eh! 🫵",
+        "Ka jingialang ka bha! ✨", "Peit ha khmat bha! 👀",
+        "Shu kham biang! 🚀", "Phi dei ka champion! 🏆",
       ],
     };
 
@@ -1176,10 +1194,37 @@
     socket.on('game-over', (data) => {
       if (graceInterval) clearInterval(graceInterval);
       stopCountdown();
-      localStorage.removeItem('housie-session'); // game is done
+      localStorage.removeItem('housie-session');
+
+      // Remove grace overlay if present
+      const graceOverlay = document.getElementById('grace-countdown-overlay');
+      if (graceOverlay) graceOverlay.remove();
+
+      // Show big "TARR NOH KI SLIP!" shredding overlay
+      const shredOverlay = document.createElement('div');
+      shredOverlay.className = 'shred-overlay';
+      shredOverlay.innerHTML = `
+        <div class="shred-content">
+          <div class="shred-emoji">📋✂️</div>
+          <div class="shred-text">TARR NOH KI SLIP!</div>
+          <div class="shred-sub">Game Over!</div>
+        </div>
+        <div class="shred-strips">
+          <div class="shred-strip"></div>
+          <div class="shred-strip"></div>
+          <div class="shred-strip"></div>
+          <div class="shred-strip"></div>
+          <div class="shred-strip"></div>
+        </div>
+      `;
+      document.getElementById('screen-game').appendChild(shredOverlay);
+      void shredOverlay.offsetHeight;
+      shredOverlay.classList.add('active');
+
       setTimeout(() => {
+        shredOverlay.remove();
         showResults(data.winners);
-      }, 4000);
+      }, 3500);
     });
 
     socket.on('game-reset', (data) => {

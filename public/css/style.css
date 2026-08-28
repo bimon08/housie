@@ -1456,6 +1456,121 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   SHRED OVERLAY — TARR NOH KI SLIP!
+   ═══════════════════════════════════════════════════════════════ */
+.shred-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.shred-overlay.active {
+  opacity: 1;
+}
+
+.shred-content {
+  text-align: center;
+  z-index: 2;
+}
+
+.shred-emoji {
+  font-size: 3rem;
+  margin-bottom: 8px;
+  animation: shredEmojiShake 0.5s ease-in-out 0.3s;
+}
+
+.shred-text {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  color: #FFD700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.6);
+  letter-spacing: 2px;
+  opacity: 0;
+  transform: scale(1.8) rotate(-5deg);
+  animation: shredTextSlam 0.6s ease-out 0.2s forwards;
+}
+
+.shred-sub {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 8px;
+  opacity: 0;
+  animation: shredFadeIn 0.5s ease 0.7s forwards;
+}
+
+.shred-strips {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.shred-strip {
+  position: absolute;
+  width: 30px;
+  height: 80px;
+  background: linear-gradient(180deg, #FFF8E7 0%, #ffe0b2 100%);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.shred-overlay.active .shred-strip:nth-child(1) {
+  left: 15%; top: 20%;
+  animation: shredFall 2s ease-in 0.4s forwards;
+  transform: rotate(5deg);
+}
+.shred-overlay.active .shred-strip:nth-child(2) {
+  left: 35%; top: 15%;
+  animation: shredFall 2.2s ease-in 0.5s forwards;
+  transform: rotate(-8deg);
+}
+.shred-overlay.active .shred-strip:nth-child(3) {
+  left: 55%; top: 18%;
+  animation: shredFall 1.8s ease-in 0.6s forwards;
+  transform: rotate(12deg);
+}
+.shred-overlay.active .shred-strip:nth-child(4) {
+  left: 72%; top: 22%;
+  animation: shredFall 2.1s ease-in 0.45s forwards;
+  transform: rotate(-4deg);
+}
+.shred-overlay.active .shred-strip:nth-child(5) {
+  left: 45%; top: 25%;
+  animation: shredFall 1.9s ease-in 0.55s forwards;
+  transform: rotate(7deg);
+}
+
+@keyframes shredTextSlam {
+  0%   { opacity: 0; transform: scale(1.8) rotate(-5deg); }
+  60%  { opacity: 1; transform: scale(0.95) rotate(1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes shredFadeIn {
+  to { opacity: 1; }
+}
+
+@keyframes shredEmojiShake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+@keyframes shredFall {
+  0%   { opacity: 0.8; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(120vh) rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    LEAVE GAME MODAL
    ═══════════════════════════════════════════════════════════════ */
 .leave-modal-overlay {
@@ -1769,8 +1884,6 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
   position: relative;
 }
 
@@ -1793,7 +1906,7 @@ body {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(0, 0, 0, 0.3) 100%);
   border: 1px solid rgba(255, 215, 0, 0.25);
   border-radius: 14px;
-  padding: 6px 4px 8px;
+  padding: 8px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1929,15 +2042,14 @@ body {
   height: auto;
   border-radius: 14px;
   padding: 10px 8px;
-  background: linear-gradient(145deg, #FFD600 0%, #FFAB00 100%);
+  background: linear-gradient(145deg, #ff1744 0%, #d50000 100%);
   box-shadow:
-    0 4px 0 #c68a00,
-    0 6px 16px rgba(255, 171, 0, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.35);
+    0 4px 0 #8e0000,
+    0 6px 16px rgba(198, 40, 40, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.15s ease;
   animation: yessBuzzerPulse 2.5s ease-in-out infinite;
-  color: #3e2723;
 }
 
 .claim-full-house::before {
@@ -1945,7 +2057,7 @@ body {
   position: absolute;
   inset: -5px;
   border-radius: 18px;
-  border: 2px solid rgba(255, 214, 0, 0.3);
+  border: 2px solid rgba(255, 23, 68, 0.3);
   animation: yessRingPulse 2.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1953,17 +2065,17 @@ body {
 .claim-full-house:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow:
-    0 6px 0 #c68a00,
-    0 8px 24px rgba(255, 171, 0, 0.7),
-    inset 0 2px 4px rgba(255, 255, 255, 0.5);
+    0 6px 0 #8e0000,
+    0 8px 24px rgba(198, 40, 40, 0.7),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
 }
 
 .claim-full-house:active:not(:disabled) {
   transform: translateY(3px);
   box-shadow:
-    0 1px 0 #c68a00,
-    0 2px 6px rgba(255, 171, 0, 0.4),
-    inset 0 2px 6px rgba(0, 0, 0, 0.3);
+    0 1px 0 #8e0000,
+    0 2px 6px rgba(198, 40, 40, 0.4),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4);
   animation: none;
 }
 
@@ -1973,8 +2085,8 @@ body {
 }
 
 @keyframes yessBuzzerPulse {
-  0%, 100% { box-shadow: 0 4px 0 #c68a00, 0 6px 16px rgba(255,171,0,0.6), inset 0 2px 4px rgba(255,255,255,0.5); }
-  50% { box-shadow: 0 4px 0 #c68a00, 0 6px 16px rgba(255,171,0,0.6), 0 0 28px rgba(255,214,0,0.5), inset 0 2px 4px rgba(255,255,255,0.5); }
+  0%, 100% { box-shadow: 0 4px 0 #8e0000, 0 6px 16px rgba(198,40,40,0.6), inset 0 2px 4px rgba(255,255,255,0.4); }
+  50% { box-shadow: 0 4px 0 #8e0000, 0 6px 16px rgba(198,40,40,0.6), 0 0 28px rgba(255,23,68,0.5), inset 0 2px 4px rgba(255,255,255,0.4); }
 }
 
 @keyframes yessRingPulse {

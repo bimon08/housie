@@ -990,12 +990,12 @@
 
     // Leave game — only clear session if user confirms
     document.getElementById('btn-leave-game').addEventListener('click', () => {
-      if (confirm('Are you sure you want to leave the game?')) {
-        localStorage.removeItem('housie-session'); // explicit leave = clear saved session
+      showLeaveModal(() => {
+        localStorage.removeItem('housie-session');
         socket.emit('leave-room', { roomCode });
         resetState();
         showScreen('home');
-      }
+      });
     });
 
     // Emit progress whenever a number is marked + update mascot
@@ -1348,6 +1348,77 @@
       setTimeout(() => overlay.remove(), 500);
     }
   }
+
+  // ── Leave Game Modal ────────────────────────────────────────────
+  function showLeaveModal(onConfirm) {
+    // Remove existing modal if any
+    const existing = document.getElementById('leave-modal-overlay');
+    if (existing) existing.remove();
+
+    const funMessages = [
+      "The octopus will miss you! 🐙",
+      "Your numbers are still waiting! 🎱",
+      "But Full House is so close! 🏠",
+      "Don't leave the party now! 🎉",
+      "The game won't be the same without you! 😢",
+      "Are you really leaving mid-game? 🫠",
+    ];
+    const msg = funMessages[Math.floor(Math.random() * funMessages.length)];
+
+    const overlay = document.createElement('div');
+    overlay.id = 'leave-modal-overlay';
+    overlay.className = 'leave-modal-overlay';
+    overlay.innerHTML = `
+      <div class="leave-modal">
+        <div class="leave-modal-emoji">😢</div>
+        <div class="leave-modal-title">Leave Game?</div>
+        <div class="leave-modal-msg">${msg}</div>
+        <div class="leave-modal-btns">
+          <button class="leave-modal-btn stay" id="leave-modal-stay">Stay 💪</button>
+          <button class="leave-modal-btn leave" id="leave-modal-leave">Leave</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Force reflow then show
+    void overlay.offsetHeight;
+    overlay.classList.add('visible');
+
+    document.getElementById('leave-modal-stay').addEventListener('click', () => {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 250);
+    });
+
+    document.getElementById('leave-modal-leave').addEventListener('click', () => {
+      overlay.remove();
+      onConfirm();
+    });
+
+    // Close on backdrop click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.classList.remove('visible');
+        setTimeout(() => overlay.remove(), 250);
+      }
+    });
+  }
+
+  // ── Browser Back Button ─────────────────────────────────────────
+  window.addEventListener('popstate', (e) => {
+    if (currentScreen === 'game') {
+      e.preventDefault();
+      history.pushState(null, '', ''); // re-push state to prevent navigation
+      showLeaveModal(() => {
+        localStorage.removeItem('housie-session');
+        if (socket && roomCode) socket.emit('leave-room', { roomCode });
+        resetState();
+        showScreen('home');
+      });
+    }
+  });
+  // Push initial state so we can intercept back
+  history.pushState(null, '', '');
 
   // ── Helpers ────────────────────────────────────────────────────
   function resetState() {

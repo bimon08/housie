@@ -1456,6 +1456,95 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   LEAVE GAME MODAL
+   ═══════════════════════════════════════════════════════════════ */
+.leave-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: background 0.25s ease;
+}
+
+.leave-modal-overlay.visible {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.leave-modal {
+  background: linear-gradient(145deg, #1a2a1a, #0e1f0e);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
+  padding: 24px 28px;
+  text-align: center;
+  max-width: 300px;
+  width: 85%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 215, 0, 0.1);
+  transform: scale(0.8) translateY(20px);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.leave-modal-overlay.visible .leave-modal {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.leave-modal-emoji {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+}
+
+.leave-modal-title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.leave-modal-msg {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.leave-modal-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.leave-modal-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.leave-modal-btn:active {
+  transform: scale(0.95);
+}
+
+.leave-modal-btn.stay {
+  background: linear-gradient(135deg, #4CAF50, #66bb6a);
+  color: white;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.leave-modal-btn.leave {
+  background: linear-gradient(135deg, #ef5350, #e53935);
+  color: white;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    GAME SCREEN — ULTRA-PREMIUM MODERN GAMING ARENA
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1687,16 +1776,14 @@ body {
 
 /* ── LEFT PANEL: Number Call Showcase + Action Deck ──────────── */
 .game-panel-left {
-  width: 120px;
+  width: 110px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 6px 4px;
-  background: #06180e;
-  border-right: 1px solid rgba(255, 215, 0, 0.12);
-  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 215, 0, 0.08);
   z-index: 10;
   gap: 4px;
 }
@@ -1816,6 +1903,7 @@ body {
   display: flex;
   justify-content: center;
   padding: 4px 0;
+  margin-top: auto;
 }
 
 .claim-buttons {
@@ -1841,14 +1929,15 @@ body {
   height: auto;
   border-radius: 14px;
   padding: 10px 8px;
-  background: linear-gradient(145deg, #ff1744 0%, #d50000 100%);
+  background: linear-gradient(145deg, #FFD600 0%, #FFAB00 100%);
   box-shadow:
-    0 4px 0 #8e0000,
-    0 6px 16px rgba(198, 40, 40, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+    0 4px 0 #c68a00,
+    0 6px 16px rgba(255, 171, 0, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   transition: all 0.15s ease;
   animation: yessBuzzerPulse 2.5s ease-in-out infinite;
+  color: #3e2723;
 }
 
 .claim-full-house::before {
@@ -1856,7 +1945,7 @@ body {
   position: absolute;
   inset: -5px;
   border-radius: 18px;
-  border: 2px solid rgba(255, 23, 68, 0.3);
+  border: 2px solid rgba(255, 214, 0, 0.3);
   animation: yessRingPulse 2.5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1864,17 +1953,17 @@ body {
 .claim-full-house:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow:
-    0 6px 0 #8e0000,
-    0 8px 24px rgba(198, 40, 40, 0.7),
-    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+    0 6px 0 #c68a00,
+    0 8px 24px rgba(255, 171, 0, 0.7),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5);
 }
 
 .claim-full-house:active:not(:disabled) {
   transform: translateY(3px);
   box-shadow:
-    0 1px 0 #8e0000,
-    0 2px 6px rgba(198, 40, 40, 0.4),
-    inset 0 2px 6px rgba(0, 0, 0, 0.4);
+    0 1px 0 #c68a00,
+    0 2px 6px rgba(255, 171, 0, 0.4),
+    inset 0 2px 6px rgba(0, 0, 0, 0.3);
   animation: none;
 }
 
@@ -1884,8 +1973,8 @@ body {
 }
 
 @keyframes yessBuzzerPulse {
-  0%, 100% { box-shadow: 0 4px 0 #8e0000, 0 6px 16px rgba(198,40,40,0.6), inset 0 2px 4px rgba(255,255,255,0.4); }
-  50% { box-shadow: 0 4px 0 #8e0000, 0 6px 16px rgba(198,40,40,0.6), 0 0 28px rgba(255,23,68,0.5), inset 0 2px 4px rgba(255,255,255,0.4); }
+  0%, 100% { box-shadow: 0 4px 0 #c68a00, 0 6px 16px rgba(255,171,0,0.6), inset 0 2px 4px rgba(255,255,255,0.5); }
+  50% { box-shadow: 0 4px 0 #c68a00, 0 6px 16px rgba(255,171,0,0.6), 0 0 28px rgba(255,214,0,0.5), inset 0 2px 4px rgba(255,255,255,0.5); }
 }
 
 @keyframes yessRingPulse {

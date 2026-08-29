@@ -1167,14 +1167,15 @@
       }
 
       function updateOverlay() {
-        overlay.innerHTML = `
-          <div class="grace-countdown-inner">
-            <div class="grace-winner-text">🏠 ${data.winnerName} got Full House!</div>
-            <div class="grace-countdown-number">${remaining}</div>
-            <div class="grace-countdown-label">seconds to claim yours!</div>
-          </div>
-        `;
+        overlay.innerHTML = `<div class="grace-countdown-number">${remaining}</div>`;
         overlay.style.display = 'flex';
+        // Re-trigger the pulse animation
+        const num = overlay.querySelector('.grace-countdown-number');
+        if (num) {
+          num.style.animation = 'none';
+          void num.offsetHeight;
+          num.style.animation = '';
+        }
       }
 
       updateOverlay();

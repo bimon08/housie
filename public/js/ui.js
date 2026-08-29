@@ -435,8 +435,9 @@ const UI = (() => {
       ribbon.appendChild(el);
 
       // Trigger the one-time floating YESSS!! tooltip popup when they click Yess
-      if (isYessClaimed && !window._shownYessPopups.has(player.id || player.name)) {
-        window._shownYessPopups.add(player.id || player.name);
+      if (isYessClaimed && !window._shownYessPopups.has(player.id) && !window._shownYessPopups.has(player.name)) {
+        if (player.id) window._shownYessPopups.add(player.id);
+        if (player.name) window._shownYessPopups.add(player.name);
         setTimeout(() => {
           triggerSingleYessBubble(player, isMe, idx);
         }, 100);
@@ -474,8 +475,9 @@ const UI = (() => {
           }
           // Trigger side bubble if not already shown
           if (!window._shownYessPopups) window._shownYessPopups = new Set();
-          if (!window._shownYessPopups.has(playerName || playerId)) {
-            window._shownYessPopups.add(playerName || playerId);
+          if (!window._shownYessPopups.has(playerName) && !window._shownYessPopups.has(playerId)) {
+            if (playerName) window._shownYessPopups.add(playerName);
+            if (playerId) window._shownYessPopups.add(playerId);
             triggerSingleYessBubble({ name: playerName, id: playerId }, false, idx);
           }
         }

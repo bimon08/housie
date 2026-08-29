@@ -641,8 +641,8 @@
       const btn = document.getElementById('btn-start-game');
       setLoading(btn, true);
       socket.emit('start-game', { roomCode }, (response) => {
+        setLoading(btn, false);
         if (!response.success) {
-          setLoading(btn, false);
           UI.showToast(response.message, 'error');
         }
       });
@@ -1309,8 +1309,10 @@
       ticketCount = data.ticketCount;
 
       if (isHost) {
-        document.getElementById('btn-start-game').style.display = '';
-        document.getElementById('btn-start-game').disabled = data.players.length < 2;
+        const startBtn = document.getElementById('btn-start-game');
+        startBtn.style.display = '';
+        setLoading(startBtn, false);
+        startBtn.disabled = data.players.length < 2;
       } else {
         document.getElementById('btn-start-game').style.display = 'none';
       }

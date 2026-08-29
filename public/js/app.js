@@ -724,61 +724,48 @@
       start: [
         "Let's goooo! 🔥", "Game time! 💪", "Show 'em what you got!", "Here we go! 🎉",
         "Focus mode: ON 🧠", "You ready? I'm ready! 🎯", "This is gonna be epic!",
-        "Shu ia ka game! 🎲", "Iohi bha ha! 💪", "Wan eh! 🔥",
       ],
       slow: [
         "Slow start huh? 🐢", "Patience is a virtue 🧘", "Don't sweat it!",
         "The board is warming up...", "Relax, it's just getting started 😌",
         "Numbers will come, trust me 😎", "Easy now, easy... 🫖",
         "The good numbers are coming!", "Think of it as... suspense 🎬",
-        "Jai jai number hoi la jen ei lar 🐌", "Peit bha leh! 😌",
-        "Thoh kham noh leh 🫖", "Ka number wan ha ka jingialang! 🎯",
+        "Jai jai number hoi la jen ei lar 🐌",
       ],
       mid: [
         "Now we're cooking! 🍳", "Getting there! 💫", "Nice pace you've got! 🚀",
         "Keep going, keep going!", "You're on a roll! 🎲", "Ooh things are heating up 🌡️",
         "Halfway hero vibes 🦸", "Not bad, not bad at all 👏",
-        "Lah kdew eh! 🍳", "Wan biang leh! 💫",
-        "Phin kham bha noh! 🚀",
       ],
       good: [
         "Woah you're flying! ✈️", "This is YOUR game! 💪", "Can't stop won't stop!",
         "The board fears you 😈", "You're built different 🔥", "Crushing it! 🏆",
         "Someone's on fire! 🧯", "Look at you go! 🏃‍♂️",
-        "Nga lah kynruh bha wain! 🔥", "Bha smat! 🏆",
-        "Pha la kit katni eh! 😈", "Shu kham biang leh! ✈️",
+        "Nga lah kynruh bha wain! 🔥",
       ],
       almostThere: [
         "SO CLOSE! Don't breathe! 😱", "ALMOST THERE!! 🤯", "I can taste it! 👅",
         "Two more... just two! ✌️", "The finish line is RIGHT THERE!",
         "My tentacles are tingling! 🐙", "HOLD ON HOLD ON!! 😤",
-        "Kynmaw bha leh!! 😱", "Lah jen jen eh! 🤯",
-        "Dang ar tylli! ✌️", "THOH THOH!! 😤",
       ],
       oneLeft: [
         "ONE MORE! ONE MORE! 😱🔥", "I CAN'T LOOK! 🙈", "DON'T. BLINK. 👁️",
         "THIS IS IT!! 🚨", "My heart can't take this! 💓",
         "The moment of truth! ⚡", "COME ONNNN! 🤞",
-        "DANG WEI TYLLI!! 😱🔥", "NGA PHER SHONG!! 🙈",
-        "WAN DAI WAN DAI!! 🤞", "KA SNGI KANI LAH EH!! 🚨",
       ],
       fullHouse: [
         "YESSSSS!! 🎉🎉🎉", "YOU DID IT!! 👑", "ABSOLUTE LEGEND! 🏆",
         "THE CROWD GOES WILD! 🎪", "Take a bow! 🎭",
-        "KHUBLEI!! 🎉🎉🎉", "SMAT SIA!! 👑", "KYNMAW BHA!! 🏆",
       ],
       someoneClaimed: [
         "That could've been you 😅", "Oof, next time! 💪", "It's okay, Full House is bigger!",
         "Stay focused, eyes on the prize 👀", "Don't worry, your time is coming!",
         "Shake it off! 🐕", "One less thing to worry about!",
-        "Ka por wan ha phi! 💪", "Peit biang bha leh! 👀",
-        "Ym dei ban sniew! 😤",
       ],
       manyDrawn: [
         "This game is getting spicy! 🌶️", "We're deep in it now 🏊", "End game approaching...",
         "The pool is thinning! 🎱", "Every number counts now!",
         "It's getting real! 😤", "Final stretch energy 🏁",
-        "Lah shu kham kumno! 🌶️", "Ka jingpyniap lah wan! 🏁",
       ],
       click: [
         "I believe in you! 💪", "Stay sharp! 🔪", "You got this! 🫵",
@@ -791,9 +778,6 @@
         "Your time is NOW! ⏰", "Legend in the making! 📖",
         "Absolute cinema! 🎥", "Sending positive vibes ~~~",
         "I see greatness ahead! 🔮", "Goosebumps! 🪿",
-        "Nga ngeit ha phi! 💪", "Phi lah eh! 🫵",
-        "Ka jingialang ka bha! ✨", "Peit ha khmat bha! 👀",
-        "Shu kham biang! 🚀", "Phi dei ka champion! 🏆",
       ],
     };
 
@@ -1134,11 +1118,60 @@
       UI.showToast('Game started! 🎉', 'success');
     });
 
+    // Special mascot messages for specific numbers (can be single string or array)
+    const numberQuips = {
+      1: "Tang in wei! ☝️",
+      2: "Two for the show! ✌️",
+      3: "Hat-trick incoming! 🎩⚽",
+      4: "Fantastic Four! 🦸‍♂️",
+      5: "High five! 🖐️",
+      7: ["suuuiiiiii", "Inshallah... hehehe SIUUU!"],
+      8: "Infinite possibilities! ♾️",
+      9: ["I am Zlatan! 🦁", "R9 El Fenomeno! ⚡"],
+      10: ["messi is not the goat dei u ronaldo", "Qué mirás, bobo? Anda pa allá! 👀"],
+      11: ["I have nussing to say! 🤫", "Eleven on the pitch! ⚽"],
+      12: "12th Man in the stands! 📢",
+      13: "Unlucky for who? Not you! 🍀",
+      14: "Cruyff turn masterclass! 🔄",
+      15: "Full house count! 15! 🏠",
+      17: "De Bruyne let me talk! 🗣️",
+      18: "Legal age to win big! 🔞🎉",
+      20: "Perfect 20/20 vision! 👓",
+      21: "Blackjack! 🃏",
+      22: "Ar tylli ki han, 22! ✌️✌️",
+      23: "Jordan mode: activated! 🏀",
+      25: "Silver Jubilee! 🥈",
+      30: "Dirty thirty! 🔥",
+      33: "Rolling doubles! 🎲",
+      40: "Life begins at 40! ✨",
+      44: "Double four on the door! 🚪",
+      45: "Why Always Me? 👕😏",
+      50: "Half century! 🏏",
+      55: "ar ngut ki pasan 55",
+      60: "An hour into the match! ⏱️",
+      66: "Corner taken quickly! 🎯",
+      69: "Nice. 😏",
+      70: "Lucky seven zero! ✨",
+      77: "Double lucky seven! 🎰",
+      80: "Ronaldinho joga bonito! 🤙✨",
+      88: "ar ngut ki mem sngaid 88",
+      89: "1 away from the end! ⏳",
+      90: ["Fergie time! 90 mins! ⏱️🔥", "Top of the shop! 90! 🏁"],
+    };
+
     socket.on('number-drawn', (data) => {
       GameRenderer.markNumber(data.number);
       UI.updateNumberBoard(data.drawnNumbers, data.number);
       UI.updateRecentBalls(data.drawnNumbers);
       TTS.announceNumber(data.number);
+      // Mascot reacts to first drawn number or special numbers
+      if (data.drawnNumbers && data.drawnNumbers.length === 1) {
+        Mascot.show(`u number ba mih nyngkong dei u ${data.number}`);
+      } else if (numberQuips[data.number]) {
+        const quip = numberQuips[data.number];
+        const msg = Array.isArray(quip) ? quip[Math.floor(Math.random() * quip.length)] : quip;
+        Mascot.show(msg);
+      }
     });
 
     socket.on('prize-claimed', (data) => {

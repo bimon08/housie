@@ -3167,6 +3167,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   background: radial-gradient(circle, rgba(5, 26, 15, 0.92) 0%, rgba(0, 0, 0, 0.96) 100%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -3180,12 +3181,18 @@ body {
 
 .countdown-pulse-ring {
   position: absolute;
-  width: 160px;
-  height: 160px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   border: 2px solid rgba(0, 229, 255, 0.4);
   box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);
   animation: ringPulse 1s ease-out infinite;
+  /* Center it over the number */
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  margin-top: -70px;
+  margin-left: -70px;
 }
 
 @keyframes ringPulse {
@@ -3195,18 +3202,19 @@ body {
 
 .game-countdown-number {
   font-family: var(--font-heading);
-  font-size: 6rem;
+  font-size: 5.5rem;
   color: #ffffff;
   text-shadow: 0 0 30px rgba(0, 229, 255, 0.9), 0 0 60px rgba(0, 229, 255, 0.5);
   animation: countdownPop 1s ease-in-out infinite;
   line-height: 1;
+  position: relative;
+  z-index: 2;
 }
 
 .game-countdown-text {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #ffd54f;
-  margin-top: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -3214,9 +3222,9 @@ body {
 
 .countdown-subtext {
   font-family: var(--font-body);
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.65);
-  margin-top: 4px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: -6px;
 }
 
 /* ═══════════════════════════════════════════════════════════════

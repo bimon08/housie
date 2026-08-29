@@ -1057,6 +1057,59 @@
     } else {
       list.innerHTML = '<div class="winner-card"><span class="winner-unclaimed">No winners</span></div>';
     }
+
+    // Set "Go to Lobby" button state — host can click immediately, others wait
+    const playAgainBtn = document.getElementById('btn-play-again');
+    if (isHost) {
+      playAgainBtn.querySelector('span').textContent = '🔄 Go to Lobby';
+      playAgainBtn.disabled = false;
+    } else {
+      playAgainBtn.querySelector('span').textContent = '⏳ Waiting for host...';
+      playAgainBtn.disabled = true;
+    }
+    setLoading(playAgainBtn, false);
+  }
+
+  // ── Navigate to Lobby (shared by results + game-reset) ──────
+  function goToLobby(data) {
+    // Reset game UI state
+    UI.resetYessClaims();
+    document.querySelectorAll('.board-num').forEach((el) => {
+      el.classList.remove('called', 'latest');
+    });
+    const recentBalls = document.getElementById('recent-balls');
+    if (recentBalls) recentBalls.innerHTML = '';
+    const numText = document.getElementById('current-number-text');
+    if (numText) numText.textContent = '?';
+    const numCount = document.getElementById('numbers-called-count');
+    if (numCount) numCount.textContent = '0/90';
+    const ribbon = document.getElementById('players-ribbon');
+    if (ribbon) ribbon.innerHTML = '';
+    const countEl = document.getElementById('players-count-num');
+    if (countEl) countEl.textContent = '0';
+    GameRenderer.clearMarkedNumbers();
+
+    // Navigate to lobby
+    showScreen('lobby');
+    UI.renderPlayerList(data.players);
+    ticketCount = data.ticketCount;
+
+    if (isHost) {
+      const startBtn = document.getElementById('btn-start-game');
+      startBtn.style.display = '';
+      setLoading(startBtn, false);
+      startBtn.disabled = data.players.length < 2;
+    } else {
+      document.getElementById('btn-start-game').style.display = 'none';
+    }
+
+    // Reset the results button for next game
+    const playAgainBtn = document.getElementById('btn-play-again');
+    playAgainBtn.querySelector('span').textContent = isHost ? '🔄 Go to Lobby' : '⏳ Waiting for host...';
+    playAgainBtn.disabled = !isHost;
+    setLoading(playAgainBtn, false);
+
+    UI.showToast('New round! Get ready 🎲', 'info');
   }
 
   function setupResultsScreen() {
@@ -1065,7 +1118,9 @@
       setLoading(btn, true);
       socket.emit('play-again', { roomCode }, (response) => {
         setLoading(btn, false);
-        if (!response.success) {
+        if (response.success) {
+          goToLobby(response);
+        } else {
           UI.showToast(response.message, 'error');
         }
       });
@@ -1276,50 +1331,28 @@
     });
 
     socket.on('game-reset', (data) => {
-      // Reset ALL game UI state for a fresh round
-      UI.resetYessClaims();
+      // Store reset data — players navigate themselves by clicking "Go to Lobby"
+      window._resetData = data;
 
-      // Clear the 1-90 number board grid
-      document.querySelectorAll('.board-num').forEach((el) => {
-        el.classList.remove('called', 'latest');
-      });
-
-      // Clear recent balls strip
-      const recentBalls = document.getElementById('recent-balls');
-      if (recentBalls) recentBalls.innerHTML = '';
-
-      // Reset current number display
-      const numText = document.getElementById('current-number-text');
-      if (numText) numText.textContent = '?';
-      const numCount = document.getElementById('numbers-called-count');
-      if (numCount) numCount.textContent = '0/90';
-
-      // Clear leaderboard / players ribbon
-      const ribbon = document.getElementById('players-ribbon');
-      if (ribbon) ribbon.innerHTML = '';
-      const countEl = document.getElementById('players-count-num');
-      if (countEl) countEl.textContent = '0';
-
-      // Clear saved marked numbers from previous game
-      GameRenderer.clearMarkedNumbers();
-
-      // Go to lobby
-      showScreen('lobby');
-      UI.renderPlayerList(data.players);
-      ticketCount = data.ticketCount;
-
-      if (isHost) {
-        const startBtn = document.getElementById('btn-start-game');
-        startBtn.style.display = '';
-        setLoading(startBtn, false);
-        startBtn.disabled = data.players.length < 2;
-      } else {
-        document.getElementById('btn-start-game').style.display = 'none';
+      // Enable the "Go to Lobby" button for non-host players on results screen
+      if (currentScreen === 'results') {
+        const btn = document.getElementById('btn-play-again');
+        btn.querySelector('span').textContent = '🔄 Go to Lobby';
+        btn.disabled = false;
+        setLoading(btn, false);
       }
-
-      UI.showToast('New round! Get ready 🎲', 'info');
     });
 
+    // Update lobby player list as players arrive one by one
+    socket.on('lobby-update', (data) => {
+      if (currentScreen === 'lobby') {
+        UI.renderPlayerList(data.players);
+        if (isHost) {
+          const startBtn = document.getElementById('btn-start-game');
+          startBtn.disabled = data.players.length < 2;
+        }
+      }
+    });
     socket.on('leaderboard-update', (data) => {
       if (currentScreen === 'game') {
         UI.renderPlayersRibbon(data.leaderboard, playerId);

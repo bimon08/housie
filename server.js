@@ -350,7 +350,11 @@ io.on('connection', (socket) => {
     const ackedPlayers = new Set();
     room._gameAcked = ackedPlayers;
 
-    // Send each player their own tickets
+    // Only lobby players are in this game
+    const gamePlayers = result.lobbyPlayers;
+    const gamePlayerIds = new Set(gamePlayers.map(p => p.id));
+
+    // Send each lobby player their own tickets
     function sendGameStarted(playerId) {
       const player = room.players.get(playerId);
       if (!player) return;
@@ -358,14 +362,14 @@ io.on('connection', (socket) => {
       io.to(playerId).emit('game-started', {
         tickets,
         isHost: room.isHost(playerId),
-        players: room.getPlayerList(),
+        players: room.getPlayerList().filter(p => gamePlayerIds.has(p.id)),
         prizes: room.game.prizes,
       });
     }
 
-    // Initial send to all
-    for (const [playerId] of room.players) {
-      sendGameStarted(playerId);
+    // Initial send to lobby players only
+    for (const p of gamePlayers) {
+      sendGameStarted(p.id);
     }
 
     // Retry for unacknowledged players every 2 seconds, up to 5 times
@@ -376,16 +380,16 @@ io.on('connection', (socket) => {
         clearInterval(retryTimer);
         return;
       }
-      for (const [playerId] of room.players) {
-        if (!ackedPlayers.has(playerId)) {
-          console.log(`[Start] Retrying game-started for unacked player ${playerId} (attempt ${retryCount})`);
-          sendGameStarted(playerId);
+      for (const p of gamePlayers) {
+        if (!ackedPlayers.has(p.id)) {
+          console.log(`[Start] Retrying game-started for unacked player ${p.id} (attempt ${retryCount})`);
+          sendGameStarted(p.id);
         }
       }
     }, 2000);
 
     callback({ success: true });
-    console.log(`Game started in room ${roomCode}`);
+    console.log(`Game started in room ${roomCode} with ${gamePlayers.length} players`);
 
     // Start auto-draw timer
     startAutoDraw(roomCode);
@@ -539,28 +543,56 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (room.resetGame(socket.id)) {
+    // If game is still in progress, only host can reset
+    if (room.gameInProgress) {
+      if (socket.id !== room.hostId) {
+        callback({ success: false, message: 'Waiting for host to restart...' });
+        return;
+      }
+
+      // Host resets the game
+      room.game.reset();
+      room.gameInProgress = false;
       stopAutoDraw(roomCode);
 
-      // Clear full house grace timer from previous game
       if (fullHouseTimers.has(roomCode)) {
         clearTimeout(fullHouseTimers.get(roomCode));
         fullHouseTimers.delete(roomCode);
       }
 
-      // Clear Yess claim flags on all players
+      // Mark ALL players as NOT in lobby yet
       for (const [, p] of room.players) {
         p.hasClaimedYess = false;
+        p.inLobby = false;
       }
 
+      // Notify all players that host has reset — they can now go to lobby
       io.to(roomCode).emit('game-reset', {
         players: room.getPlayerList(),
         ticketCount: room.ticketCount,
       });
-      callback({ success: true });
-    } else {
-      callback({ success: false, message: 'Only the host can restart!' });
     }
+
+    // Mark this player as in lobby
+    const player = room.players.get(socket.id);
+    if (player) player.inLobby = true;
+
+    // Get only players who are in the lobby
+    const lobbyPlayers = room.getPlayerList().filter(p => {
+      const pl = room.players.get(p.id);
+      return pl && pl.inLobby;
+    });
+
+    // Broadcast updated lobby list to all in-lobby players
+    io.to(roomCode).emit('lobby-update', { players: lobbyPlayers });
+
+    // Return lobby data so the clicking player can navigate
+    callback({
+      success: true,
+      players: lobbyPlayers,
+      ticketCount: room.ticketCount,
+      isHost: socket.id === room.hostId,
+    });
   });
 
   // ── Leave Room ──

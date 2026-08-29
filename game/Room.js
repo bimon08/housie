@@ -56,7 +56,7 @@ class Room {
       }
     }
 
-    this.players.set(playerId, { id: playerId, name: playerName, deviceId: deviceId || null });
+    this.players.set(playerId, { id: playerId, name: playerName, deviceId: deviceId || null, inLobby: true });
     return { success: true, replacedSocketId };
   }
 
@@ -167,19 +167,23 @@ class Room {
       return { success: false, message: 'Only the host can start the game!' };
     }
 
-    if (this.players.size < 2) {
-      return { success: false, message: 'Need at least 2 players to start!' };
-    }
-
     if (this.gameInProgress) {
       return { success: false, message: 'Game already in progress!' };
     }
 
-    this.gameInProgress = true;
-    const playerList = Array.from(this.players.values());
-    const playerTickets = this.game.initialize(playerList, this.ticketCount);
+    // Only include players who are in the lobby AND connected
+    const lobbyPlayers = Array.from(this.players.values()).filter(p =>
+      p.inLobby !== false && !p.disconnected
+    );
 
-    return { success: true, playerTickets };
+    if (lobbyPlayers.length < 2) {
+      return { success: false, message: 'Need at least 2 players in lobby to start!' };
+    }
+
+    this.gameInProgress = true;
+    const playerTickets = this.game.initialize(lobbyPlayers, this.ticketCount);
+
+    return { success: true, playerTickets, lobbyPlayers };
   }
 
   /**

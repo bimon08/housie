@@ -316,6 +316,17 @@
     });
   }
 
+  // ── Button Loading Helper ──────────────────────────────────────
+  function setLoading(btn, loading) {
+    if (loading) {
+      btn.disabled = true;
+      btn.classList.add('btn-loading');
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+    }
+  }
+
   // ── Home Screen Setup ─────────────────────────────────────────
   function setupHomeScreen() {
     const ticketDisplay = document.getElementById('ticket-count');
@@ -343,11 +354,11 @@
     // Create game
     btnCreate.addEventListener('click', () => {
       requestAppFullscreen();
-      btnCreate.disabled = true;
-      const createTimeout = setTimeout(() => { btnCreate.disabled = false; }, 5000);
+      setLoading(btnCreate, true);
+      const createTimeout = setTimeout(() => { setLoading(btnCreate, false); }, 5000);
       socket.emit('create-room', { playerName, ticketCount, deviceId }, (response) => {
         clearTimeout(createTimeout);
-        btnCreate.disabled = false;
+        setLoading(btnCreate, false);
         if (response.success) {
           roomCode = response.roomCode;
           playerId = response.playerId;
@@ -374,11 +385,11 @@
         return;
       }
 
-      btnJoin.disabled = true;
-      const joinTimeout = setTimeout(() => { btnJoin.disabled = false; }, 5000);
+      setLoading(btnJoin, true);
+      const joinTimeout = setTimeout(() => { setLoading(btnJoin, false); }, 5000);
       socket.emit('join-room', { roomCode: code, playerName, deviceId }, (response) => {
         clearTimeout(joinTimeout);
-        btnJoin.disabled = false;
+        setLoading(btnJoin, false);
         if (response.success) {
           roomCode = code;
           playerId = response.playerId;
@@ -628,10 +639,10 @@
     document.getElementById('btn-start-game').addEventListener('click', () => {
       requestAppFullscreen();
       const btn = document.getElementById('btn-start-game');
-      btn.disabled = true;
+      setLoading(btn, true);
       socket.emit('start-game', { roomCode }, (response) => {
         if (!response.success) {
-          btn.disabled = false;
+          setLoading(btn, false);
           UI.showToast(response.message, 'error');
         }
       });
@@ -1050,7 +1061,10 @@
 
   function setupResultsScreen() {
     document.getElementById('btn-play-again').addEventListener('click', () => {
+      const btn = document.getElementById('btn-play-again');
+      setLoading(btn, true);
       socket.emit('play-again', { roomCode }, (response) => {
+        setLoading(btn, false);
         if (!response.success) {
           UI.showToast(response.message, 'error');
         }

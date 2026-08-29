@@ -33,42 +33,58 @@ class TicketGenerator {
 
   /**
    * Generate a set of tickets for a game.
-   * Numbers CAN repeat across tickets, but no two tickets will have
-   * the exact same set of numbers in any column.
    * @param {number} playerCount - Number of players
    * @param {number} ticketsPerPlayer - Number of tickets each player gets
-   * @returns {Array<Array<Array<number|null>>>} Array of tickets, each ticket is 3x9
+   * @param {number} maxDuplicates - Max times a number can appear across one player's tickets (default 2)
+   * @returns {Array<Array<Array<number|null>>>} Array of tickets grouped per player
    */
-  generateTickets(playerCount, ticketsPerPlayer) {
-    const totalTickets = playerCount * ticketsPerPlayer;
-    const tickets = [];
+  generateTickets(playerCount, ticketsPerPlayer, maxDuplicates = 2) {
+    const allTickets = [];
 
-    // Track used column combos: usedColumnCombos[col] = Set of "1,5,9" strings
+    // Track used column combos globally
     const usedColumnCombos = [];
     for (let col = 0; col < 9; col++) {
       usedColumnCombos.push(new Set());
     }
 
-    for (let i = 0; i < totalTickets; i++) {
-      const ticket = this._generateSingleTicket(usedColumnCombos);
-      tickets.push(ticket);
+    for (let p = 0; p < playerCount; p++) {
+      // Track number frequency for THIS player only
+      const numberFreq = new Map(); // number -> count of tickets it appears on
+
+      const playerTickets = [];
+      for (let t = 0; t < ticketsPerPlayer; t++) {
+        const ticket = this._generateSingleTicket(usedColumnCombos, numberFreq, maxDuplicates);
+        // Update frequency map
+        for (let row = 0; row < 3; row++) {
+          for (let col = 0; col < 9; col++) {
+            const num = ticket[row][col];
+            if (num !== null) {
+              numberFreq.set(num, (numberFreq.get(num) || 0) + 1);
+            }
+          }
+        }
+        playerTickets.push(ticket);
+      }
+      allTickets.push(...playerTickets);
     }
 
-    return tickets;
+    return allTickets;
   }
 
   /**
    * Generate a single valid Housie ticket.
    * @param {Array<Set<string>>} usedColumnCombos - Used column combos per column
+   * @param {Map<number,number>} numberFreq - How many times each number appears on this player's tickets
+   * @param {number} maxDuplicates - Max times a number can appear across one player's tickets
    * @returns {Array<Array<number|null>>} 3x9 grid (null = blank cell)
    */
-  _generateSingleTicket(usedColumnCombos) {
+  _generateSingleTicket(usedColumnCombos, numberFreq, maxDuplicates) {
     let attempts = 0;
     const maxAttempts = 200;
 
     while (attempts < maxAttempts) {
       attempts++;
-      const ticket = this._tryGenerateTicket(usedColumnCombos);
+      const ticket = this._tryGenerateTicket(usedColumnCombos, numberFreq, maxDuplicates);
       if (ticket) {
         // Record column combos
         for (let col = 0; col < 9; col++) {
@@ -84,25 +100,33 @@ class TicketGenerator {
       }
     }
 
-    // Fallback: generate without column-combo constraint
-    return this._tryGenerateTicket(null);
+    // Fallback: generate without constraints
+    return this._tryGenerateTicket(null, null, null);
   }
 
   /**
    * Attempt to generate a single ticket with maximum spread.
    * @param {Array<Set<string>>|null} usedColumnCombos - Column combos to avoid (null = no constraint)
+   * @param {Map<number,number>|null} numberFreq - Frequency map for this player's numbers
+   * @param {number|null} maxDuplicates - Max allowed frequency per number
    * @returns {Array<Array<number|null>>|null} Ticket or null if failed
    */
-  _tryGenerateTicket(usedColumnCombos) {
-    // Step 1: For each column, get all numbers in range
+  _tryGenerateTicket(usedColumnCombos, numberFreq, maxDuplicates) {
+    // Step 1: For each column, get available numbers (filtered by frequency)
     const columnNumbers = [];
     for (let col = 0; col < 9; col++) {
       const { min, max } = this.columnRanges[col];
       const available = [];
+      const fallback = []; // all numbers regardless of freq
       for (let n = min; n <= max; n++) {
-        available.push(n);
+        fallback.push(n);
+        // Prefer numbers not yet at max frequency for this player
+        if (!numberFreq || !maxDuplicates || (numberFreq.get(n) || 0) < maxDuplicates) {
+          available.push(n);
+        }
       }
-      columnNumbers.push(available);
+      // Use filtered list if enough numbers, otherwise fall back to all
+      columnNumbers.push(available.length >= 1 ? available : fallback);
     }
 
     // Step 2: Decide how many numbers each column will have (1, 2, or 3)

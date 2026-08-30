@@ -3695,3 +3695,240 @@ body {
 @keyframes reconnectSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   GATEKEEPER — Block screens & Daily Meme Modal
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Block Overlay (Sunday / Expired / Coming Soon) ─────────── */
+.gatekeeper-block {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.gk-sunday {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+}
+
+.gk-expired {
+  background: linear-gradient(135deg, #1a0a0a 0%, #2d1117 40%, #3d1520 100%);
+}
+
+.gk-coming-soon {
+  background: linear-gradient(135deg, #0a1a0a 0%, #112d17 40%, #153d20 100%);
+}
+
+.gk-block-card {
+  position: relative;
+  text-align: center;
+  padding: 48px 40px;
+  max-width: 460px;
+  width: 90%;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+  animation: gkCardEntry 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform: translateY(40px);
+  opacity: 0;
+}
+
+@keyframes gkCardEntry {
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.gk-block-emoji {
+  font-size: 5rem;
+  margin-bottom: 16px;
+  animation: gkEmojiBounce 2s ease-in-out infinite;
+}
+
+@keyframes gkEmojiBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.1); }
+}
+
+.gk-block-title {
+  font-family: 'Fredoka One', cursive;
+  font-size: 2rem;
+  color: #fff;
+  margin: 0 0 12px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.gk-block-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Floating decorative shapes */
+.gk-block-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 28px;
+}
+
+.gk-floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.12;
+}
+
+.gk-floating-shape.s1 {
+  width: 120px; height: 120px;
+  background: #FF6B35;
+  top: -30px; right: -20px;
+  animation: gkFloat 6s ease-in-out infinite;
+}
+
+.gk-floating-shape.s2 {
+  width: 80px; height: 80px;
+  background: #4ECDC4;
+  bottom: -20px; left: -10px;
+  animation: gkFloat 8s ease-in-out infinite reverse;
+}
+
+.gk-floating-shape.s3 {
+  width: 60px; height: 60px;
+  background: #FFC107;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  animation: gkFloat 5s ease-in-out infinite 1s;
+}
+
+@keyframes gkFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(10px, -15px) scale(1.1); }
+  66% { transform: translate(-8px, 10px) scale(0.95); }
+}
+
+/* ── Meme Modal (Daily once) ───────────────────────────────── */
+.gk-meme-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background 0.4s ease, backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease;
+}
+
+.gk-meme-overlay.visible {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.gk-meme-overlay.closing {
+  background: rgba(0, 0, 0, 0.0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+}
+
+.gk-meme-modal {
+  position: relative;
+  max-width: 420px;
+  width: 92%;
+  max-height: 85vh;
+  background: linear-gradient(145deg, #1e1e2e, #2a2a3e);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(78, 205, 196, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.8) translateY(30px);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+.gk-meme-overlay.visible .gk-meme-modal {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.gk-meme-overlay.closing .gk-meme-modal {
+  transform: scale(0.85) translateY(20px);
+  opacity: 0;
+}
+
+.gk-meme-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gk-meme-day {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.1rem;
+  color: #FF6B35;
+  text-shadow: 0 0 12px rgba(255, 107, 53, 0.3);
+}
+
+.gk-meme-countdown {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.gk-meme-image-wrap {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  max-height: 55vh;
+  overflow: hidden;
+}
+
+.gk-meme-image {
+  max-width: 100%;
+  max-height: 50vh;
+  border-radius: 14px;
+  object-fit: contain;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.gk-meme-dismiss {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 16px;
+  padding: 14px 0;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FF6B35, #FF8C42);
+  color: #fff;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.35);
+}
+
+.gk-meme-dismiss:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 28px rgba(255, 107, 53, 0.5);
+}
+
+.gk-meme-dismiss:active {
+  transform: scale(0.97);
+}

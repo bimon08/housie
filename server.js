@@ -9,6 +9,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const Room = require('./game/Room');
 
 const app = express();
@@ -31,6 +32,9 @@ process.on('unhandledRejection', (reason) => {
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve memes directory (images dropped by user)
+app.use('/memes', express.static(path.join(__dirname, 'public', 'memes')));
+
 // Health check endpoint (keeps Render free tier alive)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', rooms: rooms.size, uptime: process.uptime() });
@@ -42,6 +46,24 @@ app.get('/api/config', (req, res) => {
     posthogKey: process.env.POSTHOG_KEY || process.env.PUBLIC_POSTHOG_KEY || '',
     posthogHost: process.env.POSTHOG_HOST || process.env.PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
   });
+});
+
+// Memes listing endpoint — returns list of image filenames in /public/memes/
+app.get('/api/memes', (req, res) => {
+  const memesDir = path.join(__dirname, 'public', 'memes');
+  const validExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  try {
+    if (!fs.existsSync(memesDir)) {
+      return res.json({ memes: [] });
+    }
+    const files = fs.readdirSync(memesDir)
+      .filter(f => validExts.includes(path.extname(f).toLowerCase()))
+      .sort();
+    res.json({ memes: files });
+  } catch (e) {
+    console.error('Error listing memes:', e);
+    res.json({ memes: [] });
+  }
 });
 
 // Store active rooms

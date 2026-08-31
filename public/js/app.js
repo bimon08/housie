@@ -1770,7 +1770,9 @@
   }
 
   // ── Start ──────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
+  // Run init immediately if DOM is already ready (dynamic script loading),
+  // otherwise wait for DOMContentLoaded
+  function _initApp() {
     // Init socket (graceful offline handling)
     try {
       socket = io({ reconnection: true, reconnectionDelay: 2000, reconnectionAttempts: Infinity });
@@ -1843,5 +1845,11 @@
         }
       });
     }
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initApp);
+  } else {
+    _initApp();
+  }
 })();

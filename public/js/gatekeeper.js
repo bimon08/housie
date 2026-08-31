@@ -10,7 +10,8 @@
  */
 
 const Gatekeeper = (() => {
-  const APP_START = new Date(2026, 8, 1);  // Sept 1, 2026 (month is 0-indexed)
+  const APP_START = new Date(2026, 7, 31);  // Aug 31, 2026 (available today)
+  const SEPT_1    = new Date(2026, 8, 1);   // Sept 1 — Day 1 of the meme countdown
   const APP_END   = new Date(2026, 8, 30, 23, 59, 59); // Sept 30, 2026 end of day
   const MEME_SHOWN_KEY = 'housie-meme-shown-date';
 
@@ -65,7 +66,7 @@ const Gatekeeper = (() => {
 
     // Calculate day number (Sept 1 = Day 1)
     const now = new Date();
-    const diffMs = now - APP_START;
+    const diffMs = now - SEPT_1;
     const dayNum = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
     const daysLeft = 30 - dayNum;
 
@@ -177,8 +178,9 @@ const Gatekeeper = (() => {
       return false;
     }
 
-    // Show daily meme modal (once per day)
-    if (!hasMemeBeenShownToday()) {
+    // Show daily meme modal (once per day, only from Sept 1 onwards)
+    const now = new Date();
+    if (now >= SEPT_1 && !hasMemeBeenShownToday()) {
       await fetchMemeList();
       const meme = getRandomMeme();
       if (meme) {

@@ -165,20 +165,71 @@ function generateRoomCode() {
   return code;
 }
 
-// ─── Periodic Lobby Sync (every 5s) ──────────────────────────────
-// Broadcasts authoritative player list to all rooms in lobby state
+// ─── Periodic Lobby Sync (every 3s) ──────────────────────────────
+// Broadcasts authoritative lobby player list to all rooms in lobby state
 setInterval(() => {
   for (const [roomCode, room] of rooms) {
     if (!room.gameInProgress) {
-      const playerList = room.getPlayerList();
+      const playerList = room.getLobbyPlayerList();
       io.to(roomCode).emit('player-joined', {
         playerName: null, // sync, not a real join
-        playerCount: room.players.size,
+        playerCount: playerList.length,
         players: playerList,
       });
     }
   }
-}, 5000);
+}, 3000);
+
+/**
+ * Find an old socket ID for a device or player name in a room.
+ */
+function findOldSocketId(room, deviceId, playerName) {
+  if (deviceId) {
+    for (const [id, p] of room.players) {
+      if (p.deviceId === deviceId) return id;
+    }
+  }
+  if (playerName) {
+    for (const [id, p] of room.players) {
+      if (p.name === playerName) return id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Remap a player from an old socket ID to a new one.
+ */
+function remapPlayer(room, oldSocketId, newSocketId, deviceId) {
+  // Clear grace timer
+  if (room._graceTimers && room._graceTimers.has(oldSocketId)) {
+    clearTimeout(room._graceTimers.get(oldSocketId));
+    room._graceTimers.delete(oldSocketId);
+  }
+
+  // Remove old socket from Socket.io room
+  const oldSocket = io.sockets.sockets.get(oldSocketId);
+  if (oldSocket) oldSocket.leave(room.code);
+  playerRooms.delete(oldSocketId);
+
+  // Re-map player data
+  const playerData = room.players.get(oldSocketId);
+  if (!playerData) return;
+  room.players.delete(oldSocketId);
+  playerData.id = newSocketId;
+  playerData.disconnected = false;
+  delete playerData.disconnectedAt;
+  if (deviceId) playerData.deviceId = deviceId;
+  room.players.set(newSocketId, playerData);
+
+  if (oldSocketId === room.hostId) room.hostId = newSocketId;
+
+  // Remap tickets if game is in progress
+  if (room.game && room.game.playerTickets && room.game.playerTickets[oldSocketId]) {
+    room.game.playerTickets[newSocketId] = room.game.playerTickets[oldSocketId];
+    delete room.game.playerTickets[oldSocketId];
+  }
+}
 
 // ─── Socket.io Event Handling ────────────────────────────────────
 
@@ -251,7 +302,7 @@ io.on('connection', (socket) => {
     playerRooms.set(socket.id, roomCode);
     socket.join(roomCode);
 
-    const playerList = room.getPlayerList();
+    const playerList = room.getLobbyPlayerList();
 
     callback({
       success: true,
@@ -262,11 +313,11 @@ io.on('connection', (socket) => {
       isHost: false,
     });
 
-    // Notify ALL clients in the room (including sender) with authoritative player list
+    // Notify ALL clients in the room (including sender) with authoritative lobby list
     // Using io.to() ensures everyone has the same count
     io.to(roomCode).emit('player-joined', {
       playerName,
-      playerCount: room.players.size,
+      playerCount: playerList.length,
       players: playerList,
     });
 
@@ -322,6 +373,118 @@ io.on('connection', (socket) => {
         ticketCount: room.ticketCount,
       });
     }
+  });
+
+  // ── Rejoin Lobby (reconnect while in lobby) ──
+  // When a client reconnects in the lobby, their new socket ID is not in the
+  // Socket.io room. This event re-associates them so they receive broadcasts.
+  socket.on('rejoin-lobby', ({ roomCode: code, playerName: name, deviceId: devId }, callback) => {
+    const room = rooms.get(code);
+    if (!room) {
+      callback({ success: false, message: 'Room not found.' });
+      return;
+    }
+
+    // If game already started, tell the client so it can auto-join
+    if (room.gameInProgress) {
+      const oldId = findOldSocketId(room, devId, name);
+      const tickets = oldId && room.game.playerTickets ? room.game.playerTickets[oldId] : null;
+      if (oldId && tickets) {
+        // Remap the player to the new socket
+        remapPlayer(room, oldId, socket.id, devId);
+        playerRooms.set(socket.id, code);
+        socket.join(code);
+        callback({
+          success: true,
+          gameInProgress: true,
+          playerId: socket.id,
+          tickets,
+          isHost: room.isHost(socket.id),
+          players: room.getPlayerList(),
+          drawnNumbers: room.game.drawnNumbers,
+          prizes: room.game.prizes,
+          hostName: room.players.get(room.hostId)?.name || 'Host',
+        });
+      } else {
+        callback({ success: false, message: 'Game in progress. Cannot rejoin lobby.' });
+      }
+      return;
+    }
+
+    // Find the old socket entry for this device/name
+    let oldSocketId = null;
+    if (devId) {
+      for (const [id, p] of room.players) {
+        if (p.deviceId === devId && id !== socket.id) { oldSocketId = id; break; }
+      }
+    }
+    if (!oldSocketId && name) {
+      for (const [id, p] of room.players) {
+        if (p.name === name && id !== socket.id) { oldSocketId = id; break; }
+      }
+    }
+
+    if (oldSocketId) {
+      // Clear grace timer
+      if (room._graceTimers && room._graceTimers.has(oldSocketId)) {
+        clearTimeout(room._graceTimers.get(oldSocketId));
+        room._graceTimers.delete(oldSocketId);
+      }
+      // Remove old socket from Socket.io room
+      const oldSocket = io.sockets.sockets.get(oldSocketId);
+      if (oldSocket) oldSocket.leave(code);
+      playerRooms.delete(oldSocketId);
+
+      // Re-map player data to new socket ID
+      const playerData = room.players.get(oldSocketId);
+      room.players.delete(oldSocketId);
+      playerData.id = socket.id;
+      playerData.disconnected = false;
+      delete playerData.disconnectedAt;
+      room.players.set(socket.id, playerData);
+
+      if (oldSocketId === room.hostId) room.hostId = socket.id;
+    } else if (!room.players.has(socket.id)) {
+      // Not found at all — they may have been removed during grace period
+      // Re-add them
+      room.players.set(socket.id, {
+        id: socket.id,
+        name: name,
+        deviceId: devId || null,
+        inLobby: true,
+        disconnected: false,
+      });
+    }
+
+    playerRooms.set(socket.id, code);
+    socket.join(code);
+
+    const player = room.players.get(socket.id);
+    if (player) {
+      player.disconnected = false;
+      delete player.disconnectedAt;
+    }
+
+    const playerList = room.getLobbyPlayerList();
+
+    callback({
+      success: true,
+      gameInProgress: false,
+      playerId: socket.id,
+      players: playerList,
+      ticketCount: room.ticketCount,
+      isHost: room.isHost(socket.id),
+      hostName: room.players.get(room.hostId)?.name || 'Host',
+    });
+
+    // Broadcast updated player list to everyone
+    io.to(code).emit('player-joined', {
+      playerName: name,
+      playerCount: playerList.length,
+      players: playerList,
+    });
+
+    console.log(`${name} rejoined lobby in room ${code} (socket ${socket.id})`);
   });
 
   // ── Check Game Status (lobby auto-join) ──

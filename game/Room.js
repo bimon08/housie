@@ -23,7 +23,7 @@ class Room {
     this.gameInProgress = false;
 
     // Add host as first player
-    this.players.set(hostId, { id: hostId, name: hostName, deviceId: null });
+    this.players.set(hostId, { id: hostId, name: hostName, deviceId: null, inLobby: true });
   }
 
   /**
@@ -275,6 +275,22 @@ class Room {
       isHost: p.id === this.hostId,
       disconnected: !!p.disconnected,
     }));
+  }
+
+  /**
+   * Get player list filtered to only those in the lobby.
+   * After a game reset, players must click "Go to Lobby" to appear.
+   * @returns {Array<{ id: string, name: string, isHost: boolean }>}
+   */
+  getLobbyPlayerList() {
+    return Array.from(this.players.values())
+      .filter((p) => p.inLobby !== false)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        isHost: p.id === this.hostId,
+        disconnected: !!p.disconnected,
+      }));
   }
 
   /**

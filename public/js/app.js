@@ -1370,9 +1370,11 @@
     });
 
     socket.on('connect', () => {
-      // Auto-rejoin if we were in a game
-      if (currentScreen === 'game' || currentScreen === 'lobby') {
+      // Auto-rejoin based on current screen
+      if (currentScreen === 'game') {
         attemptAutoRejoin();
+      } else if (currentScreen === 'lobby' && roomCode) {
+        attemptLobbyRejoin();
       } else if (currentScreen !== 'welcome' && currentScreen !== 'home') {
         UI.showToast('Reconnected!', 'success', 2000);
       }
@@ -1451,6 +1453,55 @@
     } catch {
       showReconnectingOverlay(false);
     }
+  }
+
+  /**
+   * Attempt to rejoin the lobby after a socket reconnect.
+   * When Socket.io reconnects, the client gets a new socket ID but is no longer
+   * in the Socket.io room — so it misses all broadcasts. This re-associates it.
+   */
+  function attemptLobbyRejoin() {
+    if (!roomCode) {
+      showReconnectingOverlay(false);
+      return;
+    }
+
+    socket.emit('rejoin-lobby', {
+      roomCode,
+      playerName,
+      deviceId,
+    }, (response) => {
+      showReconnectingOverlay(false);
+      if (response.success) {
+        playerId = response.playerId;
+        isHost = response.isHost;
+        hostName = response.hostName || hostName;
+
+        if (response.gameInProgress) {
+          // Game started while we were disconnected — jump in
+          enterGame(response);
+          UI.showToast('Game in progress — jumping in! 🎉', 'success');
+        } else {
+          // Still in lobby — update the player list
+          UI.renderPlayerList(response.players);
+          ticketCount = response.ticketCount;
+
+          const startBtn = document.getElementById('btn-start-game');
+          if (isHost) {
+            startBtn.style.display = '';
+            startBtn.disabled = response.players.length < 2;
+          } else {
+            startBtn.style.display = 'none';
+          }
+
+          UI.showToast('Reconnected! 🎉', 'success', 2000);
+        }
+      } else {
+        UI.showToast(response.message || 'Lost connection to room', 'error');
+        resetState();
+        showScreen('home');
+      }
+    });
   }
 
   /**
